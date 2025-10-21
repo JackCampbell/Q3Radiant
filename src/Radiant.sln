@@ -1,0 +1,65 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.40629.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Radiant", "Radiant.vcxproj", "{5D705D03-8E5E-B8D4-36D2-F4DCBC751D6F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8E5F1B7A-9D05-158A-0A3F-05202BF9B163} = {8E5F1B7A-9D05-158A-0A3F-05202BF9B163}
+		{B80E7E95-566D-4CB0-8151-0567CB206D5A} = {B80E7E95-566D-4CB0-8151-0567CB206D5A}
+		{9E9C44C2-B11E-1DD1-5084-5C92D1533C98} = {9E9C44C2-B11E-1DD1-5084-5C92D1533C98}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Splines", "splines\Splines.vcxproj", "{8E5F1B7A-9D05-158A-0A3F-05202BF9B163}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "jpeg6", "jpeg6\jpeg6.vcxproj", "{B80E7E95-566D-4CB0-8151-0567CB206D5A}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pak", "pak\pak.vcxproj", "{9E9C44C2-B11E-1DD1-5084-5C92D1533C98}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		DebugQ2|Win32 = DebugQ2|Win32
+		DebugTTimo|Win32 = DebugTTimo|Win32
+		Release|Win32 = Release|Win32
+		ReleaseTTimo|Win32 = ReleaseTTimo|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5D705D03-8E5E-B8D4-36D2-F4DCBC751D6F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{5D705D03-8E5E-B8D4-36D2-F4DCBC751D6F}.Debug|Win32.Build.0 = Debug|Win32
+		{5D705D03-8E5E-B8D4-36D2-F4DCBC751D6F}.DebugQ2|Win32.ActiveCfg = DebugQ2|Win32
+		{5D705D03-8E5E-B8D4-36D2-F4DCBC751D6F}.DebugQ2|Win32.Build.0 = DebugQ2|Win32
+		{5D705D03-8E5E-B8D4-36D2-F4DCBC751D6F}.DebugTTimo|Win32.ActiveCfg = DebugTTimo|Win32
+		{5D705D03-8E5E-B8D4-36D2-F4DCBC751D6F}.DebugTTimo|Win32.Build.0 = DebugTTimo|Win32
+		{5D705D03-8E5E-B8D4-36D2-F4DCBC751D6F}.Release|Win32.ActiveCfg = Release|Win32
+		{5D705D03-8E5E-B8D4-36D2-F4DCBC751D6F}.ReleaseTTimo|Win32.ActiveCfg = ReleaseTTimo|Win32
+		{5D705D03-8E5E-B8D4-36D2-F4DCBC751D6F}.ReleaseTTimo|Win32.Build.0 = ReleaseTTimo|Win32
+		{8E5F1B7A-9D05-158A-0A3F-05202BF9B163}.Debug|Win32.ActiveCfg = Debug|Win32
+		{8E5F1B7A-9D05-158A-0A3F-05202BF9B163}.Debug|Win32.Build.0 = Debug|Win32
+		{8E5F1B7A-9D05-158A-0A3F-05202BF9B163}.DebugQ2|Win32.ActiveCfg = Debug|Win32
+		{8E5F1B7A-9D05-158A-0A3F-05202BF9B163}.DebugQ2|Win32.Build.0 = Debug|Win32
+		{8E5F1B7A-9D05-158A-0A3F-05202BF9B163}.DebugTTimo|Win32.ActiveCfg = Debug|Win32
+		{8E5F1B7A-9D05-158A-0A3F-05202BF9B163}.DebugTTimo|Win32.Build.0 = Debug|Win32
+		{8E5F1B7A-9D05-158A-0A3F-05202BF9B163}.Release|Win32.ActiveCfg = Release|Win32
+		{8E5F1B7A-9D05-158A-0A3F-05202BF9B163}.ReleaseTTimo|Win32.ActiveCfg = Release|Win32
+		{8E5F1B7A-9D05-158A-0A3F-05202BF9B163}.ReleaseTTimo|Win32.Build.0 = Release|Win32
+		{B80E7E95-566D-4CB0-8151-0567CB206D5A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{B80E7E95-566D-4CB0-8151-0567CB206D5A}.Debug|Win32.Build.0 = Debug|Win32
+		{B80E7E95-566D-4CB0-8151-0567CB206D5A}.DebugQ2|Win32.ActiveCfg = Debug|Win32
+		{B80E7E95-566D-4CB0-8151-0567CB206D5A}.DebugTTimo|Win32.ActiveCfg = Debug|Win32
+		{B80E7E95-566D-4CB0-8151-0567CB206D5A}.Release|Win32.ActiveCfg = Release|Win32
+		{B80E7E95-566D-4CB0-8151-0567CB206D5A}.ReleaseTTimo|Win32.ActiveCfg = Release|Win32
+		{9E9C44C2-B11E-1DD1-5084-5C92D1533C98}.Debug|Win32.ActiveCfg = Debug|Win32
+		{9E9C44C2-B11E-1DD1-5084-5C92D1533C98}.Debug|Win32.Build.0 = Debug|Win32
+		{9E9C44C2-B11E-1DD1-5084-5C92D1533C98}.DebugQ2|Win32.ActiveCfg = Debug|Win32
+		{9E9C44C2-B11E-1DD1-5084-5C92D1533C98}.DebugQ2|Win32.Build.0 = Debug|Win32
+		{9E9C44C2-B11E-1DD1-5084-5C92D1533C98}.DebugTTimo|Win32.ActiveCfg = Debug|Win32
+		{9E9C44C2-B11E-1DD1-5084-5C92D1533C98}.DebugTTimo|Win32.Build.0 = Debug|Win32
+		{9E9C44C2-B11E-1DD1-5084-5C92D1533C98}.Release|Win32.ActiveCfg = Release|Win32
+		{9E9C44C2-B11E-1DD1-5084-5C92D1533C98}.Release|Win32.Build.0 = Release|Win32
+		{9E9C44C2-B11E-1DD1-5084-5C92D1533C98}.ReleaseTTimo|Win32.ActiveCfg = Release|Win32
+		{9E9C44C2-B11E-1DD1-5084-5C92D1533C98}.ReleaseTTimo|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

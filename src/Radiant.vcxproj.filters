@@ -1,0 +1,522 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{620a9c2a-e3c7-45ce-b1b4-14f57eacc9a0}</UniqueIdentifier>
+      <Extensions>ico;cur;bmp;dlg;rc2;rct;bin;cnt;rtf;gif;jpg;jpeg;jpe</Extensions>
+    </Filter>
+    <Filter Include="Sources">
+      <UniqueIdentifier>{177b3bdb-2b3c-45c7-9de9-7b3fa86f466f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BrushScript.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="BSInput.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="cameratargetdlg.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="CamWnd.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="CapDialog.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="cbrushstub.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="CommandsDlg.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogInfo.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogTextures.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogThick.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="dlgcamera.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="DlgEvent.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="EditWnd.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="EntityListDlg.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="FindTextureDlg.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="GroupDlg.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="LstToolBar.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="MainFrm.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="MapInfo.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="NameDlg.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="NewProjDlg.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="PatchDensityDlg.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="PatchDialog.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="PlugIn.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="PlugInManager.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="PrefsDlg.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="qgl_win.c">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="radbsp.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="RADEditWnd.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Radiant.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="RotateDlg.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="ScaleDialog.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="ScriptDlg.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="ShaderInfo.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="StdAfx.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="SurfaceDlg.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="TexEdit.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="TextureBar.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="TextureLayout.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="TexWnd.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Undo.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="WaveOpen.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Winding.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="XYWnd.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="ZWnd.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Bmp.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="brush.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="csg.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="drag.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="eclass.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="entity.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="lbmlib.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="map.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="mathlib.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="mru.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="parse.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="points.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="qe3.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="select.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="terrain.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="vertsel.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="win_dlg.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="win_ent.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="win_main.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="win_qe3.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="z.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="brush_primit.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="GLInterface.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="IEpairs.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="IShaders.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Messaging.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="PluginEntities.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="SelectedFace.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="SurfacePlugin.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="cmdlib.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="pakstuff.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="pmesh.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ZWnd.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="cameratargetdlg.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="CamWnd.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="CapDialog.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="ChildFrm.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="CommandsDlg.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="DialogInfo.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="DialogTextures.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="DialogThick.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="dlgcamera.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="DlgEvent.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="EditWnd.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="EntityListDlg.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="FindTextureDlg.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="GroupBar.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="GroupDlg.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="LstToolBar.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="MainFrm.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="MapInfo.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="NameDlg.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="NewProjDlg.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="PatchDensityDlg.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="PatchDialog.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="PlugIn.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="PlugInManager.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="PrefsDlg.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="qe3.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="qerplugin.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="RADEditWnd.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="Radiant.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="RadiantDoc.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="RadiantView.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="Resource.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="RotateDlg.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="ScaleDialog.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="ScriptDlg.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="ShaderInfo.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="StdAfx.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="SurfaceDlg.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="TexEdit.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="TextureBar.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="TextureLayout.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="TexWnd.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="WaveOpen.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="XYWnd.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="BSInput.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="terrain.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="EpairsWrapper.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="Messaging.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="IEpairs.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="igl.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="IMessaging.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="IPluginEntities.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="ISelectedFace.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="IShaders.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="isurfaceplugin.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="cmdlib.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="select.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="qedefs.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="qertypes.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="qfiles.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+    <ClInclude Include="pakstuff.h">
+      <Filter>Sources</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\bevel.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\bitmap2.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\bmp00001.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\bmp00002.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="RES\bmp00003.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\endcap.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\ibevel.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="RES\icon2.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\iendcap.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\logo_sm3dfx.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\q.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="q.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\Radiant.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\RadiantDoc.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="RES\shaderbar.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="RES\shaderdoc.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="RES\shaderframe.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\Toolbar.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="toolbar1.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\toolbar1.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\toolbar2.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\viewdefa.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\viewoppo.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\Q3.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="res\Radiant.rc2">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="splines\Debug\Splines.lib" />
+    <Library Include="jpeg6\Debug\jpeg6.lib" />
+    <Library Include="pak\Debug\pak.lib" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Radiant.rc">
+      <Filter>Sources</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

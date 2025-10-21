@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LocalDebuggerCommand>D:\BuildCode\Radiant\Q3Radiant-D.exe</LocalDebuggerCommand>
+    <LocalDebuggerWorkingDirectory>D:\BuildCode\Radiant</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommandArguments>
+    </LocalDebuggerCommandArguments>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugQ2|Win32'">
+    <LocalDebuggerCommand>D:\BuildCode\hlradiant\QERadiant.exe</LocalDebuggerCommand>
+    <LocalDebuggerWorkingDirectory>D:\BuildCode\hlradiant</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommandArguments>D:\BuildCode\hlradiant\halflife.qe4</LocalDebuggerCommandArguments>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LocalDebuggerCommandArguments>
+    </LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommand>D:\BuildCode\radiant\q3radiant.exe</LocalDebuggerCommand>
+    <LocalDebuggerWorkingDirectory>D:\BuildCode\radiant</LocalDebuggerWorkingDirectory>
+  </PropertyGroup>
+</Project>
