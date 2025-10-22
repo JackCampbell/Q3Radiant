@@ -62,8 +62,8 @@ int rgIds[EntLast] = {
 
 	IDC_BTN_ASSIGNSOUND,
 	IDC_BTN_ASSIGNMODEL,
-	IDC_E_CREATE
-
+	IDC_E_CREATE,
+	IDC_ANIM_LIST
 };
 
 HWND hwndEnt[EntLast];
@@ -156,10 +156,7 @@ BOOL CALLBACK EntityListWndProc(
 	switch (uMsg) {
 	case WM_KEYDOWN:
 		if (LOWORD(wParam) == VK_RETURN) {
-			SendMessage(g_qeglobals.d_hwndEntity,
-				WM_COMMAND,
-				(CBN_DBLCLK << 16) + IDC_E_LIST,
-				0);
+			SendMessage(g_qeglobals.d_hwndEntity, WM_COMMAND, (CBN_DBLCLK << 16) + IDC_E_LIST, 0); // !!! dont work!!!
 			return 0;
 		}
 		break;
@@ -180,7 +177,7 @@ void GetEntityControls(HWND ghwndEntity) {
 	int i;
 
 	for (i = 0; i < EntLast; i++) {
-		if (i == EntList || i == EntProps || i == EntComment)
+		if (i == EntList || i == EntProps || i == EntComment || i == EntAnimList)
 			continue;
 		if (i == EntKeyField || i == EntValueField)
 			continue;
@@ -205,6 +202,14 @@ void GetEntityControls(HWND ghwndEntity) {
 		g_qeglobals.d_hInstance,
 		NULL);
 	if (!hwndEnt[EntList])
+		Error("CreateWindow failed");
+
+	hwndEnt[EntAnimList] = CreateWindow("combobox", NULL,
+		CBS_SORT | CBS_DROPDOWN | CBS_NOINTEGRALHEIGHT
+		| WS_VSCROLL | WS_CHILD | WS_VISIBLE,
+		5, 5, 180, 99, g_qeglobals.d_hwndEntity,
+		(HMENU)IDC_ANIM_LIST, g_qeglobals.d_hInstance, NULL);
+	if (!hwndEnt[EntAnimList])
 		Error("CreateWindow failed");
 
 	hwndEnt[EntProps] = CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEW, NULL,
@@ -301,6 +306,7 @@ void GetEntityControls(HWND ghwndEntity) {
 	SendMessage(hwndEnt[EntKeyField], WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
 	SendMessage(hwndEnt[EntValueField], WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
 	SendMessage(hwndEnt[EntTab], WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
+	SendMessage(hwndEnt[EntAnimList], WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
 
 	if (g_pParentWnd->CurrentStyle() > 0 && g_pParentWnd->CurrentStyle() < 3)
 		SendMessage(g_qeglobals.d_hwndEdit, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), (LPARAM)TRUE);
@@ -395,7 +401,6 @@ BOOL CreateEntityWindow(HINSTANCE hInstance) {
 	OldFieldWindowProc = (WNDPROC)GetWindowLong(hwndEnt[EntKeyField], GWL_WNDPROC);
 	SetWindowLong(hwndEnt[EntKeyField], GWL_WNDPROC, (long)FieldWndProc);
 	SetWindowLong(hwndEnt[EntValueField], GWL_WNDPROC, (long)FieldWndProc);
-
 	OldEntityListWindowProc = (WNDPROC)GetWindowLong(hwndEnt[EntList], GWL_WNDPROC);
 	SetWindowLong(hwndEnt[EntList], GWL_WNDPROC, (long)EntityListWndProc);
 
@@ -528,7 +533,21 @@ void SetKeyValuePairs(bool bClearMD3) {
 	}
 	ListView_SortItems(hwndEnt[EntProps], KeyCompare, 0);
 
-	// if (IsGame(GAME_Q2) && edit_entity->eclass->nShowFlags & ECLASS_TARGET_SPAWNER) 
+	// load anims
+	if (edit_entity->md3Class) {
+		SendMessage(hwndEnt[EntAnimList], CB_RESETCONTENT, 0, 0);
+		SendMessage(hwndEnt[EntAnimList], CB_ADDSTRING, 0, (LPARAM)"");
+
+		for (anim_t *pAnim = edit_entity->md3Class->pAnims; pAnim; pAnim = pAnim->pNext) {
+			long iIndex = SendMessage(hwndEnt[EntAnimList], CB_ADDSTRING, 0, (LPARAM)pAnim->pszName);
+			SendMessage(hwndEnt[EntAnimList], CB_SETITEMDATA, iIndex, (LPARAM)pAnim->pszName);
+
+			if (edit_entity->strTestAnim == pAnim->pszName) {
+				SendMessage(hwndEnt[EntList], CB_SETCURSEL, iIndex, 0);
+			}
+		}
+	}
+	
 	if (bClearMD3) {
 		edit_entity->md3Class = NULL;
 		edit_entity->brushes.onext->bModelFailed = false;
@@ -611,10 +630,10 @@ BOOL UpdateSel(int iIndex, eclass_t *pec) {
 	char buffer[24];
 	for (i = 0; i < MAX_FLAGS; i++) {
 		HWND hwnd = hwndEnt[EntCheck1 + i];
-		char *name = pec->flagnames[i];
+		char *name = pec->spawnflags[i].pstrName;
 		if (name && name[0] != 0 && name[0] != '-') {
 			EnableWindow(hwnd, TRUE);
-			SendMessage(hwnd, WM_SETTEXT, 0, (LPARAM)pec->flagnames[i]);
+			SendMessage(hwnd, WM_SETTEXT, 0, (LPARAM)name);
 		} else {
 			if (IsGame(GAME_HL)) {
 				sprintf(buffer, "%d:%d", i, (int)powf(2, i));
@@ -640,8 +659,7 @@ BOOL UpdateSel(int iIndex, eclass_t *pec) {
 BOOL UpdateEntitySel(eclass_t *pec) {
 	int iIndex;
 
-	iIndex = (int)SendMessage(hwndEnt[EntList], CB_FINDSTRINGEXACT,
-		(WPARAM)-1, (LPARAM)pec->name);
+	iIndex = (int)SendMessage(hwndEnt[EntList], CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)pec->name);
 
 	return UpdateSel(iIndex, pec);
 }
@@ -914,12 +932,16 @@ void SizeEntityDlg(int iWidth, int iHeight) {
 		WrapSizer(hwndEnt[EntAssignSounds], -74, -90, 60, 20, pWidth, pHeight);
 		WrapSizer(hwndEnt[EntAssignModels], -74, -66, 60, 20, pWidth, pHeight);
 
+		WrapSizer(hwndEnt[EntAnimList], 160, -90, -78, 20, pWidth, pHeight);
+
 		WrapSizer(hwndEnt[EntDelProp], -54, -120, 40, 18, pWidth, pHeight);
 		WrapSizer(hwndEnt[EntValueLabel], 4, -118, 40, 18, pWidth, pHeight);
 		WrapSizer(hwndEnt[EntValueField], 48, -120, -60, 18, pWidth, pHeight);
 
 		WrapSizer(hwndEnt[EntKeyLabel], 4, -138, 40, 18, pWidth, pHeight);
 		WrapSizer(hwndEnt[EntKeyField], 48, -140, -14, 18, pWidth, pHeight);
+
+		
 
 		int center = pHeight / 2;
 		WrapSizer(hwndEnt[EntProps], 4, center, -14, -144, pWidth, pHeight);
@@ -1220,6 +1242,12 @@ BOOL CALLBACK EntityWndProc(
 			}
 			break;
 			*/
+		case IDC_ANIM_LIST:
+			if (HIWORD(wParam) == CBN_SELCHANGE) {
+				int iIndex = SendMessage(hwndEnt[EntAnimList], CB_GETCURSEL, 0, 0);
+				edit_entity->strTestAnim = (char *)SendMessage(hwndEnt[EntAnimList], CB_GETITEMDATA, iIndex, 0);
+			}
+			break;
 		case IDC_E_LIST:
 
 			switch (HIWORD(wParam)) {

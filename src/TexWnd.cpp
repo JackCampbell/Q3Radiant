@@ -2722,6 +2722,9 @@ bool WAD2_LoadFile(const char *filepath) {
 		if (q->name[0] == '*' || stricmp(q->name, "HINT") == 0 || stricmp(q->name, "SKIP") == 0) {
 			q->flags |= SURF_TRANS66;
 		}
+		if (q->name[0] == '*') {
+			q->flags |= SURF_WARP;
+		}
 		q->next = g_qeglobals.d_qtextures;
 		g_qeglobals.d_qtextures = q;
 		count++;
@@ -3039,3 +3042,58 @@ void UnBindSkyBox() {
 	qglBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
 #endif
+
+
+struct CSkinLine {
+public:
+	CString			strName;
+	CMap<CString, LPCSTR, qtexture_t *, qtexture_t *> listTextures;
+};
+
+CPtrArray g_listSkinLine;
+
+int Load_SkinFile(brush_t *b, const char *strSurfaceName) {
+	const char *strSkinPath = ValueForKey(b->owner, "skin");
+	qtexture_t *qtex;
+
+	if (strSkinPath[0] == 0) {
+		return -1;
+	}
+	for (int i = 0; i < g_listSkinLine.GetCount(); i++) {
+		CSkinLine *line = (CSkinLine *)g_listSkinLine.GetAt(i);
+		if (line->strName == strSkinPath) {
+			if (line->listTextures.Lookup(strSurfaceName, qtex)) {
+				return qtex->texture_number;
+			}
+			return -1;
+		}
+	}
+	char *pBuf;
+	if (PakLoadFile(strSkinPath, (void **)&pBuf) == -1) {
+		return -1;
+	}
+
+	CSkinLine *line = new CSkinLine();
+	line->strName = strSkinPath;
+
+	char *mark = pBuf;
+	while (mark) {
+		char *token = Lex_ReadToken(mark);
+		if (!token) {
+			break;
+		}
+		CString name = token;
+		Lex_ExpectToken(mark, ",", true);
+		char *pShaderName = Lex_ReadToken(mark, true, false, true);
+		qtex = Texture_ForName(pShaderName);
+		line->listTextures.SetAt(name, qtex);
+	}
+	g_listSkinLine.Add(line);
+	free(pBuf);
+
+	
+	if (line->listTextures.Lookup(strSurfaceName, qtex)) {
+		return qtex->texture_number;
+	}
+	return -1;
+}

@@ -33,27 +33,26 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 void HideInfoDialog();
 void ShowInfoDialog(const char* pText);
 
-class CDialogInfo : public CDialog
-{
-// Construction
+class CDialogInfo : public CDialog {
+	// Construction
 public:
 	CDialogInfo(CWnd* pParent = NULL);   // standard constructor
 
-// Dialog Data
+	// Dialog Data
 	//{{AFX_DATA(CDialogInfo)
 	enum { IDD = IDD_DLG_INFORMATION };
 	CEdit	m_wndInfo;
 	//}}AFX_DATA
 
 
-// Overrides
+	// Overrides
 	// ClassWizard generated virtual function overrides
 	//{{AFX_VIRTUAL(CDialogInfo)
-	protected:
+protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
 	//}}AFX_VIRTUAL
 
-// Implementation
+	// Implementation
 protected:
 
 	// Generated message map functions

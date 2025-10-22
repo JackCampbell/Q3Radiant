@@ -2,7 +2,7 @@
     "game" "Quake1"
     "brush_primit" "0"
     "basepath" "D:\BuildCode\quake\id1"
-    "modpath" "D:\BuildCode\quake\cmod"
+    // "modpath" "D:\BuildCode\quake\cmod"
     "rshcmd" "D:\BuildCode\quake\tools"
     "remotebasepath" "D:\BuildCode\quake\id1"
     "entitypath" "D:\BuildCode\quake\src\game\*.qc"

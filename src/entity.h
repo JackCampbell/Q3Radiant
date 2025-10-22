@@ -39,6 +39,7 @@ typedef struct entity_s {
 	vec3_t			vDecalDir;
 	vec3_t			vBeamEnd;
 	int				nBeamTime;
+	char *			strTestAnim;
 	IPluginEntity *	pPlugEnt;
 	vec3_t			vRotation;   // valid for misc_models only
 	vec3_t			vScale;      // valid for misc_models only
@@ -81,7 +82,7 @@ void Load_MDCModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMa
 void Load_MD3Model(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e, int nModelIndex);
 void Load_MD2Model(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e, int nModelIndex);
 void Load_BSPModel_v29(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, int nModelIndex);
-void Load_MDLModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, int nModelIndex);
+void Load_MDLModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e);
 void Load_SPRModel_v1(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e);
 void Load_SPRModel_v2(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e);
 void Load_DecalModel(entitymodel *&pModel, qtexture_t *qtex, vec3_t &vMin, vec3_t &vMax, eclass_t *e);
@@ -89,8 +90,13 @@ void Model_SpriteView(entitymodel *&pModel, vec3_t angles, vec3_t origin, vec3_t
 void Model_BeamView(entitymodel *&pModel, vec3_t start, vec3_t end, int scale, int scroll, vec3_t &vMin, vec3_t &vMax);
 void Model_DecalView(entitymodel *&pModel, vec3_t normal, vec3_t &vMin, vec3_t &vMax);
 int PROG_LoadSkin(byte *pic, int width, int height, bool bIsAlpha);
-
+void Load_MDSModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e);
+void Load_MD4Model(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e);
+void Load_MDMModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e);
+void Load_MDLModel_v10(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e);
 //Timo : used for parsing epairs in brush primitive
 epair_t* ParseEpair(void);
 char *ValueForKey(epair_t *&e, const char *key);
+
+anim_t *FindAnimState(eclass_t *pEclass, char *pszName, bool makeAnim, int nFrameCount);
 

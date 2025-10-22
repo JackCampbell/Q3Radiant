@@ -45,6 +45,18 @@ Flag names can follow the size description:
 - QUAKED func_door (0 .5 .8) ? START_OPEN STONE_SOUND DOOR_DONT_LINK GOLD_KEY SILVER_KEY
 
 */
+void FreeEpirs(epair_t *&epairs) {
+	epair_t	*next, *ep;
+
+	for (ep = epairs; ep; ep = next) {
+		next = ep->next;
+		free(ep->key);
+		free(ep->value);
+		free(ep);
+	}
+	epairs = nullptr;
+}
+
 
 void FreeEntityModel(entitymodel_t *&model) {
 	entitymodel_t *pNext;
@@ -60,22 +72,16 @@ void FreeEntityModel(entitymodel_t *&model) {
 }
 
 
-void FreeEpirs(epair_t *&epairs) {
-	epair_t	*next, *ep;
-
-	for (ep = epairs; ep; ep = next) {
-		next = ep->next;
-		free(ep->key);
-		free(ep->value);
-		free(ep);
-	}
-	epairs = nullptr;
-}
 
 void FreeAnims(anim_t *&pAnim) {
 	while (pAnim) {
 		anim_t *pNext = pAnim->pNext;
+		for (int i = 0; i < pAnim->nNumFrames; i++) {
+			FreeEntityModel(pAnim->pFrameList[i]);
+		}
+		free(pAnim->pFrameList);
 		free(pAnim->pszName);
+		free(pAnim);
 		pAnim = pNext;
 	}
 	pAnim = nullptr;
@@ -93,6 +99,18 @@ void CleanEntityList(eclass_t *&pList) {
 		FreeEpirs(pList->epairs);
 		FreeAnims(pList->pAnims);
 
+		for (int i = 0; i < MAX_FLAGS; i++) {
+			spawnflag_t *flags = &pList->spawnflags[i];
+			if (flags->strAnim) {
+				free(flags->strAnim);
+			}
+			if (flags->strModel) {
+				free(flags->strModel);
+			}
+			flags->strAnim = nullptr;
+			flags->strModel = nullptr;
+		}
+
 		if (pList->modelpath)
 			free(pList->modelpath);
 		if (pList->skinpath)			// PGM
@@ -108,6 +126,11 @@ void CleanEntityList(eclass_t *&pList) {
 }
 
 void RemoveAnimIndex(char *pos) {
+	int len = strlen(pos);
+	if (IsGame(GAME_Q2) && isdigit(pos[len - 2]) == true) {
+		pos[len - 2] = 0; // remove last two digit
+		return;
+	}
 	do {
 		if (isdigit(*pos)) {
 			*pos = 0;
@@ -117,22 +140,42 @@ void RemoveAnimIndex(char *pos) {
 	} while (*pos);
 }
 
-anim_t *FindAnimState(eclass_t *pEclass, char *pszName) {
-	for (anim_t *pAnim = pEclass->pAnims; pAnim; pAnim = pAnim->pNext) {
-		if (strcmp(pAnim->pszName, pszName) == 0) {
-			return pAnim;
+anim_t *FindAnimState(eclass_t *pEclass, char *pszName, bool makeAnim, int nGroupSize) {
+	char strTemp[64];
+	anim_t *pAnim = nullptr;
+
+	strcpy(strTemp, pszName);
+	RemoveAnimIndex(strTemp);
+	for (pAnim = pEclass->pAnims; pAnim; pAnim = pAnim->pNext) {
+		if (strcmp(pAnim->pszName, strTemp) == 0) {
+			break;
 		}
 	}
-	return nullptr;
-}
+	if (!pAnim) {
+		if (!makeAnim) {
+			return nullptr;
+		}
+		pAnim = (anim_t *)qmalloc(sizeof(anim_t));
+		pAnim->nFrameCount = 0;
+		pAnim->nNumFrames = 0;
+		pAnim->pszName = strdup(strTemp);
+		ResetBound(pAnim->vMin, pAnim->vMax);
+		pAnim->pNext = pEclass->pAnims;
+		pEclass->pAnims = pAnim;
+	}
+	if (pAnim->nNumFrames == pAnim->nFrameCount) {
+		if (nGroupSize == 0) {
+			nGroupSize = ((pAnim->nNumFrames + 1) & ~15) + 16;
+		}
+		entitymodel_t **pTemp = pAnim->pFrameList;
 
-
-anim_t *AllocAnimState(eclass_t *pEclass, char *pszName) {
-	anim_t *pAnim = (anim_t *)qmalloc(sizeof(pAnim));
-	pAnim->pszName = strdup(pszName);
-	ResetBound(pAnim->vMin, pAnim->vMax);
-	pAnim->pNext = pEclass->pAnims;
-	pEclass->pAnims = pAnim;
+		pAnim->pFrameList = (entitymodel_t **)qmalloc(sizeof(entitymodel_t *) * nGroupSize);
+		pAnim->nFrameCount = nGroupSize;
+		if (pTemp) {
+			memcpy(pAnim->pFrameList, pTemp, sizeof(entitymodel_t *) * pAnim->nNumFrames);
+			free(pTemp);
+		}
+	}
 	return pAnim;
 }
 
@@ -215,8 +258,14 @@ void LoadModel(const char *pLocation, eclass_t *e, vec3_t &vMin, vec3_t &vMax, e
 	if (IsGame(GAME_ID3)) {
 		if (strcmp(exts, "md3") == 0) {
 			Load_MD3Model(pModel, buffer, vMin, vMax, e, nModelIndex);
+		} else if (strcmp(exts, "md4") == 0) {
+			Load_MD4Model(pModel, buffer, vMin, vMax, e);
 		} else if (strcmp(exts, "mdc") == 0) {
-			Load_MDCModel(pModel, buffer, vMin, vMax, e, nModelIndex); // !?
+			Load_MDCModel(pModel, buffer, vMin, vMax, e, nModelIndex);
+		} else if (strcmp(exts, "mds") == 0) {
+			Load_MDSModel(pModel, buffer, vMin, vMax, e);
+		} else if (strcmp(exts, "mdm") == 0) {
+			Load_MDMModel(pModel, buffer, vMin, vMax, e);
 		} else if (strcmp(exts, "ase") == 0) {
 			Load_ASEModel(pModel, buffer, vMin, vMax, nModelIndex);
 		}
@@ -224,7 +273,7 @@ void LoadModel(const char *pLocation, eclass_t *e, vec3_t &vMin, vec3_t &vMax, e
 		Load_MD2Model(pModel, buffer, vMin, vMax, e, nModelIndex);
 	} else if (IsGame(GAME_Q1 | GAME_HX2)) {
 		if (strcmp(exts, "mdl") == 0) {
-			Load_MDLModel(pModel, buffer, vMin, vMax, nModelIndex);
+			Load_MDLModel(pModel, buffer, vMin, vMax, e);
 		} else if (strcmp(exts, "spr") == 0) {
 			Load_SPRModel_v1(pModel, buffer, vMin, vMax, e);
 		} else if (strcmp(exts, "bsp") == 0) {
@@ -233,6 +282,8 @@ void LoadModel(const char *pLocation, eclass_t *e, vec3_t &vMin, vec3_t &vMax, e
 	} else if (IsGame(GAME_HL)) {
 		if (strcmp(exts, "spr") == 0) {
 			Load_SPRModel_v2(pModel, buffer, vMin, vMax, e);
+		} else if (strcmp(exts, "mdl") == 0) {
+			Load_MDLModel_v10(pModel, buffer, vMin, vMax, e);
 		}
 	}
 	free(buffer);
@@ -269,7 +320,7 @@ eclass_t *Eclass_InitFromText(char *source) {
 		if (!name) {
 			break;
 		}
-		strcpy(e->flagnames[i], name);
+		e->spawnflags[i].pstrName = strdup(name);
 	}
 	Lex_NextLine(source);
 
@@ -297,9 +348,39 @@ eclass_t *Eclass_InitFromText(char *source) {
 			e->skinpath = Lex_ReadToken(mark, true, true);
 		} else if (strKey == "frame") {
 			e->nFrame = Lex_IntValue(mark, true);
-		} else if (strKey == "flagmodels") {
+		} else if (strKey == "spawnflag") {
 			int index = Lex_IntValue(mark, true);
-			e->flagmodels[index] = Lex_ReadToken(mark, true, true);
+			e->spawnflags[index].nStart = -1;
+			e->spawnflags[index].nEnd = -1;
+
+			if (Lex_CheckToken(mark, "model", true)) {
+				Lex_ExpectToken(mark, "=", true);
+				e->spawnflags[index].strModel = Lex_ReadToken(mark, true, true);
+			}
+			if (Lex_CheckToken(mark, "anim", true)) {
+				Lex_ExpectToken(mark, "=", true);
+				e->spawnflags[index].strAnim = Lex_ReadToken(mark, true, true);
+			}
+			if (Lex_CheckToken(mark, "start", true)) {
+				Lex_ExpectToken(mark, "=", true);
+				e->spawnflags[index].nStart = Lex_IntValue(mark, true);
+			}
+			if (Lex_CheckToken(mark, "end", true)) {
+				Lex_ExpectToken(mark, "=", true);
+				e->spawnflags[index].nEnd = Lex_IntValue(mark, true);
+			}
+		} else if (strKey == "anim") {
+			e->strAnim = Lex_ReadToken(mark, true, true);
+			e->nAnimStart = -1;
+			e->nAnimEnd = -1;
+			if (Lex_CheckToken(mark, "start", true)) {
+				Lex_ExpectToken(mark, "=", true);
+				e->nAnimStart = Lex_IntValue(mark, true);
+			}
+			if (Lex_CheckToken(mark, "end", true)) {
+				Lex_ExpectToken(mark, "=", true);
+				e->nAnimEnd = Lex_IntValue(mark, true);
+			}
 		} else if (strKey == "editor") {
 			epair_t *ep = (epair_t *)qmalloc(sizeof(epair_t));
 			ep->key = Lex_ReadToken(mark, true, true);
@@ -401,6 +482,9 @@ qboolean Eclass_HasModel(eclass_t *e, vec3_t &vMin, vec3_t &vMax) {
 
 		free(e->modelpath);
 		e->modelpath = NULL;
+	}
+	if (e->pAnims) {
+		return true;
 	}
 	return (e->model != NULL && e->model->nTriCount > 0);
 }
@@ -639,6 +723,10 @@ eclass_t* GetCachedModel(entity_t *pEntity, const char *pName, vec3_t &vMin, vec
 	if (!e) {
 		return nullptr;
 	}
+	if (e->pAnims) {
+		VectorCopy(pEntity->eclass->mins, vMin);
+		VectorCopy(pEntity->eclass->maxs, vMax);
+	}
 	pEntity->md3Class = e;
 	return e;
 }
@@ -744,7 +832,6 @@ void Load_ASEModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMa
 				pModel->nTextureBind[pModel->nNumTextures++] = pMaterials[index]->texture_number;
 				pModel->nSkinWidth = pMaterials[index]->width;
 				pModel->nSkinHeight = pMaterials[index]->height;
-				pModel->nModelIndex = nModelIndex;
 
 				// next surface
 				pModel->pNext = reinterpret_cast<entitymodel_t*>(qmalloc(sizeof(entitymodel_t)));
@@ -787,7 +874,7 @@ void Load_MDCModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMa
 		pModel->nModelPosition = 0;
 		pModel->pTriList = new trimodel[nTris];
 		pModel->nTriCount = nTris;
-		pModel->nModelIndex = nModelIndex;
+		strcpy(pModel->strSurfaceName, pSurface->name);
 
 		int nStart = 0;
 		for (int i = 0; i < nTris; i++) {
@@ -813,6 +900,44 @@ void Load_MDCModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMa
 	}
 }
 
+/*
+Encoding:
+
+The encoded normal vector uses a spherical coordinate system. Since the normal vector is, by definition, a length of one, only 
+the angles need to be recorded. Each angle is constrained within [0, 255], so as to fit in one octet. A normal vector encodes
+into 16 bits. (XXX: more blah)
+lat (latitude)	=> 15	14	13	12	11	10	9	8
+lng (longitude)	=> 7	6	5	4	3	2	1	0
+
+(Code in q3tools/common/mathlib.c:NormalToLatLong)
+lng <- atan2 ( y / x) * 255 / (2 * pi)
+lat <- acos ( z ) * 255 / (2 * pi)
+lng <- lower 8 bits of lng
+lat <- lower 8 bits of lat
+normal <- (lat shift-left 8) binary-or (lng)
+
+Two special vectors are the ones that point up and point down, as these values for z
+result in a singularity for acos. The special case of straight-up is:
+normal <- 0
+
+And the special case of straight down is:
+lat <- 0
+lng <- 128
+normal <- (lat shift-left 8) binary-or (lng)
+
+or, shorter:
+normal <- 32768
+
+Decoding:
+
+(Code in q3tools/q3map/misc_model.c:InsertMD3Model)
+lat <- ((normal shift-right 8) binary-and 255) * (2 * pi ) / 255
+lng <- (normal binary-and 255) * (2 * pi) / 255
+x <- cos ( lat ) * sin ( lng )
+y <- sin ( lat ) * sin ( lng )
+z <- cos ( lng )
+*/
+
 void Load_MD3Model(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e, int nModelIndex) {
 	readbuf_t stream;
 	stream.buffer = buffer;
@@ -820,12 +945,12 @@ void Load_MD3Model(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMa
 	stream.size = -1;
 
 	md3Header_t *header = stream.GetPtr<md3Header_t>();
+	md3Frame_t *frame = stream.GetOffset<md3Frame_t>(header->ofsFrames);
 	
 	int nSurfaceOffset = header->ofsSurfaces;
 	for(int s = 0; s < header->numSurfaces; s++) {
 
 		md3Surface_t *pSurface = stream.GetOffset<md3Surface_t>(nSurfaceOffset);
-		
 		md3St_t *pST = stream.GetOffset<md3St_t>(nSurfaceOffset + pSurface->ofsSt);
 		md3Triangle_t *pTris = stream.GetOffset<md3Triangle_t>(nSurfaceOffset + pSurface->ofsTriangles);
 		md3XyzNormal_t *pXyz = stream.GetOffset<md3XyzNormal_t>(nSurfaceOffset + pSurface->ofsXyzNormals);
@@ -842,7 +967,7 @@ void Load_MD3Model(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMa
 		pModel->nModelPosition = 0;
 		pModel->pTriList = new trimodel[nTris];
 		pModel->nTriCount = nTris;
-		pModel->nModelIndex = nModelIndex;
+		strcpy(pModel->strSurfaceName, pSurface->name);
 
 		int nStart = 0;
 		for (int i = 0; i < nTris; i++) {
@@ -851,6 +976,8 @@ void Load_MD3Model(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMa
 				for (int j = 0; j < 3; j++) {
 					pModel->pTriList[nStart].v[k][j] = pXyz[index].xyz[j] * MD3_XYZ_SCALE;
 				}
+				short normal = pXyz[index].normal;
+
 				pModel->pTriList[nStart].st[k][0] = pST[pTris[i].indexes[k]].st[0];
 				pModel->pTriList[nStart].st[k][1] = pST[pTris[i].indexes[k]].st[1];
 				ExtendBounds(pModel->pTriList[nStart].v[k], vMin, vMax);
@@ -868,6 +995,29 @@ void Load_MD3Model(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMa
 	}
 }
 
+
+void Load_MD2Frame(dmdl_t *header, dtriangle_t *pTris, dstvert_t *pST, daliasframe_t *frame, entitymodel *&pModel, vec3_t &vMin, vec3_t &vMax, bool bIsStandModel) {
+	const int nTris = header->num_tris;
+	for (int i = 0; i < nTris; i++) {
+		dtriangle_t *tri = &pTris[i];
+
+		for (int k = 0; k < 3; k++) {
+			for (int j = 0; j < 3; j++) {
+				int index = tri->index_xyz[k];
+				pModel->pTriList[i].v[k][j] = (frame->verts[index].v[j] * frame->scale[j] + frame->translate[j]);
+			}
+
+			pModel->pTriList[i].st[k][0] = float(pST[tri->index_st[k]].s) / pModel->nSkinWidth;
+			pModel->pTriList[i].st[k][1] = float(pST[tri->index_st[k]].t) / pModel->nSkinHeight;
+			if (bIsStandModel) {
+				ExtendBounds(pModel->pTriList[i].v[k], vMin, vMax);
+			}
+		}
+	}
+}
+
+
+
 void Load_MD2Model(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e, int nModelIndex) {
 	readbuf_t stream;
 	stream.buffer = buffer;
@@ -880,9 +1030,7 @@ void Load_MD2Model(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMa
 	CString strSkin = stream.GetOffset<char>(header->ofs_skins);
 	dtriangle_t *pTris = stream.GetOffset<dtriangle_t>(header->ofs_tris);
 	// daliasframe_t *frame = stream.GetOffset<daliasframe_t>(header->ofs_frames);
-	int nTris = header->num_tris;
-
-
+	
 	if (strSkin[0] == -128) {
 		if (e->skinpath != nullptr) {
 			strSkin = e->skinpath;
@@ -899,41 +1047,39 @@ void Load_MD2Model(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMa
 	// daliasframe_t *frame = stream.GetOffset<daliasframe_t>(header->ofs_frames);
 	for (int nFrame = 0; nFrame < header->num_frames; nFrame++) {
 		daliasframe_t *frame = stream.GetOffset<daliasframe_t>(header->ofs_frames + header->framesize * nFrame);
-		// Sys_Printf("Frame: %s\n", frame->name);
+		anim_t *anim = FindAnimState(e, frame->name, true, 0);
+		// Sys_Printf("Test Anim: %s\n", frame->name);
+		bool IsBound = strnicmp(frame->name, "stand", 5) == 0;
 
-		if (strncmp(frame->name, "stand", 5) != 0) {
-			continue;
-		}
-		pModel->nSkinWidth = nSkinWidth;
-		pModel->nSkinHeight = nSkinHeight;
-		pModel->nModelPosition = 0;
-		pModel->pTriList = new trimodel[nTris];
-		pModel->nTriCount = nTris;
-		pModel->nModelIndex = nModelIndex;
-		pModel->nFrameIndex = nFrame;
-		pModel->nTextureBind[pModel->nNumTextures++] = nTex;
-		for (int i = 0; i < nTris; i++) {
-			dtriangle_t *tri = &pTris[i];
-
-			for (int k = 0; k < 3; k++) {
-				for (int j = 0; j < 3; j++) {
-					int index = tri->index_xyz[k];
-					pModel->pTriList[i].v[k][j] = (frame->verts[index].v[j] * frame->scale[j] + frame->translate[j]);
-				}
-
-				pModel->pTriList[i].st[k][0] = float(pST[tri->index_st[k]].s) / pModel->nSkinWidth;
-				pModel->pTriList[i].st[k][1] = float(pST[tri->index_st[k]].t) / pModel->nSkinHeight;
-				ExtendBounds(pModel->pTriList[i].v[k], vMin, vMax);
-			}
-		}
-		break;
+		int nIndex = anim->nNumFrames++;
+		anim->pFrameList[nIndex] = (entitymodel_t *)qmalloc(sizeof(entitymodel_t));
+		anim->pFrameList[nIndex]->nSkinHeight = header->skinheight;
+		anim->pFrameList[nIndex]->nSkinWidth = header->skinwidth;
+		anim->pFrameList[nIndex]->nTriCount = header->num_tris;
+		anim->pFrameList[nIndex]->nModelPosition = 0;
+		anim->pFrameList[nIndex]->pTriList = (trimodel *)qmalloc(sizeof(trimodel) * header->num_tris);
+		anim->pFrameList[nIndex]->nTextureBind[0] = nTex;
+		anim->pFrameList[nIndex]->nNumTextures = 1;
+		Load_MD2Frame(header, pTris, pST, frame, anim->pFrameList[nIndex], vMin, vMax, IsBound);
 	}
 }
 
 
+#define VectorCopy2(a,b) { b[0]=a[0];b[1]=a[1]; }
 
-
-#define VectorCopy2(a,b) {b[0]=a[0];b[1]=a[1];}
+void Load_AnimTexture(entitymodel *&pModel, const char *strTexture) {
+	char strTexName[64];
+	strcpy(strTexName, strTexture);
+	qtexture_t *q = nullptr;
+	do {
+		q = Texture_ForName(strTexName);
+		if (q == notexture) {
+			break;
+		}
+		pModel->nTextureBind[pModel->nNumTextures++] = q->texture_number;
+		strTexName[1]++; // increment
+	} while (q != notexture && strTexName[0] == '+');
+}
 
 void Load_BSPModel_v29(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, int nModelIndex) {
 	readbuf_t stream;
@@ -986,21 +1132,18 @@ void Load_BSPModel_v29(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t 
 		miptex_list[i] = miptex;
 	}
 
-	entitymodel *pBase = pModel;
 	for (int i = 0; i < num_faces; i++) {
 		q1_dface_t *face = &faces[i];
 		q1_texinfo_t *texinfo = &texinfos[face->texinfo];
 		q1_miptex_t *miptex = miptex_list[texinfo->miptex];
 
-		qtexture_t *q = Texture_ForName(miptex->name);
-
 		pModel->nSkinHeight = miptex->height;
 		pModel->nSkinWidth = miptex->width;
 		pModel->nTriCount = face->numedges - 2;
 		pModel->nModelPosition = 0;
-		pModel->nModelIndex = nModelIndex;
 		pModel->pTriList = (trimodel *)qmalloc(sizeof(trimodel) * pModel->nTriCount);
-		pModel->nTextureBind[pModel->nNumTextures++] = q->texture_number;
+		
+		Load_AnimTexture(pModel, miptex->name);
 
 		float st[2];
 		for (int j = 0; j < face->numedges; j++) {
@@ -1055,7 +1198,7 @@ void Load_BSPModel_v29(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t 
 #endif
 }
 
-void Load_MDLFrame(aliashdr_t *header, stvert_t *verts, triangle_t *tris, trivertx_t *frame, entitymodel *&pModel, vec3_t &vMin, vec3_t &vMax) {
+void Load_MDLFrame(aliashdr_t *header, stvert_t *verts, triangle_t *tris, trivertx_t *frame, entitymodel *&pModel, vec3_t &vMin, vec3_t &vMax, bool bExpandBound) {
 	for (int j = 0; j < header->numtris; j++) {
 		for (int i = 0; i < 3; i++) {
 			int vertex = tris[j].vertindex[i];
@@ -1074,12 +1217,14 @@ void Load_MDLFrame(aliashdr_t *header, stvert_t *verts, triangle_t *tris, triver
 				pos[k] = (header->scale[k] * unpack) + header->origin[k];
 			}
 			VectorCopy(pos, pModel->pTriList[j].v[i]);
-			ExtendBounds(pos, vMin, vMax);
+			if (bExpandBound) {
+				ExtendBounds(pos, vMin, vMax);
+			}
 		}
 	}
 }
 
-void Load_MDLModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, int nModelIndex) {
+void Load_MDLModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e) {
 	readbuf_t stream;
 	stream.buffer = buffer;
 	stream.offset = 0;
@@ -1091,25 +1236,21 @@ void Load_MDLModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMa
 		return;
 	}
 
-	pModel->nSkinHeight = header->skinheight;
-	pModel->nSkinWidth = header->skinwidth;
-	pModel->nTriCount = header->numtris;
-	pModel->nModelPosition = 0;
-	pModel->pTriList = (trimodel *)qmalloc(sizeof(trimodel) * header->numtris);
-	pModel->nModelIndex = nModelIndex;
+	int nNumTextures = 0;
+	int nTextureBind[64];
 
 	for (int i = 0; i < header->numskins; i++) {
 		const int skin_size = header->skinwidth * header->skinheight;
 		int group = stream.GetType<int>();
 		if (group == 0) {
 			byte *skin = stream.GetPtr<byte>(skin_size);
-			pModel->nTextureBind[pModel->nNumTextures++] = PROG_LoadSkin(skin, header->skinwidth, header->skinheight, false);
+			nTextureBind[nNumTextures++] = PROG_LoadSkin(skin, header->skinwidth, header->skinheight, false);
 		} else {
 			int num_skin = stream.GetType<int>();
 			float *time = stream.GetPtr<float>(num_skin);
 			for (int j = 0; j < num_skin; j++) {
 				byte *skin = stream.GetPtr<byte>(skin_size);
-				pModel->nTextureBind[pModel->nNumTextures++] = PROG_LoadSkin(skin, header->skinwidth, header->skinheight, false);
+				nTextureBind[nNumTextures++] = PROG_LoadSkin(skin, header->skinwidth, header->skinheight, false);
 			}
 		}
 	}
@@ -1125,28 +1266,50 @@ void Load_MDLModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMa
 			trivertx_t max = stream.GetType<trivertx_t>();
 			char *name = stream.GetPtr<char>(16);
 			trivertx_t *frames = stream.GetPtr<trivertx_t>(header->numverts);
-			// Sys_Printf("-- Anim Single: %s\n", name);
-			if (!load_frames || strcmp(name, "stand1") == 0 || strcmp(name, "idle1") == 0) {
-				load_frames = frames;
-			}
+
+			bool IsBound = strnicmp(name, "stand", 5) == 0;
+
+			anim_t *anim = FindAnimState(e, name, true, 0);
+			int nIndex = anim->nNumFrames++;
+			anim->pFrameList[nIndex] = (entitymodel_t *)qmalloc(sizeof(entitymodel_t));
+			anim->pFrameList[nIndex]->nSkinHeight = header->skinheight;
+			anim->pFrameList[nIndex]->nSkinWidth = header->skinwidth;
+			anim->pFrameList[nIndex]->nTriCount = header->numtris;
+			anim->pFrameList[nIndex]->nModelPosition = 0;
+			anim->pFrameList[nIndex]->pTriList = (trimodel *)qmalloc(sizeof(trimodel) * header->numtris);
+			anim->pFrameList[nIndex]->nNumTextures = nNumTextures;
+			memcpy(anim->pFrameList[nIndex]->nTextureBind, nTextureBind, sizeof(int) * 64);
+			Load_MDLFrame(header, verts, tris, frames, anim->pFrameList[nIndex], vMin, vMax, IsBound);
 		} else {
 			int num_frames = stream.GetType<int>();
 			trivertx_t bound_min = stream.GetType<trivertx_t>();
 			trivertx_t bound_max = stream.GetType<trivertx_t>();
 			float *time = stream.GetPtr<float>(num_frames);
+
 			for (int j = 0; j < num_frames; j++) {
 				trivertx_t min = stream.GetType<trivertx_t>();
 				trivertx_t max = stream.GetType<trivertx_t>();
 				char *name = stream.GetPtr<char>(16);
 				trivertx_t *frames = stream.GetPtr<trivertx_t>(header->numverts);
-				// Sys_Printf("-- Anim Group: %s\n", name);
-				if (!load_frames || strcmp(name, "stand") == 0 || strcmp(name, "idle") == 0) {
-					load_frames = frames;
-				}
+
+				bool IsBound = strnicmp(name, "stand", 5) == 0 && j == 0;
+
+				anim_t *anim = FindAnimState(e, name, true, num_frames);
+				int nIndex = anim->nNumFrames++;
+				assert(nIndex == j);
+				anim->pFrameList[nIndex] = (entitymodel_t *)qmalloc(sizeof(entitymodel_t));
+				anim->pFrameList[nIndex]->nSkinHeight = header->skinheight;
+				anim->pFrameList[nIndex]->nSkinWidth = header->skinwidth;
+				anim->pFrameList[nIndex]->nTriCount = header->numtris;
+				anim->pFrameList[nIndex]->nModelPosition = 0;
+				anim->pFrameList[nIndex]->pTriList = (trimodel *)qmalloc(sizeof(trimodel) * header->numtris);
+				anim->pFrameList[nIndex]->nNumTextures = nNumTextures;
+				memcpy(anim->pFrameList[nIndex]->nTextureBind, nTextureBind, sizeof(int) * 64);
+				Load_MDLFrame(header, verts, tris, frames, anim->pFrameList[nIndex], vMin, vMax, IsBound);
 			}
 		}
 	}
-	Load_MDLFrame(header, verts, tris, load_frames, pModel, vMin, vMax);
+	// Load_MDLFrame(header, verts, tris, load_frames, pModel, vMin, vMax);
 }
 
 
@@ -1168,7 +1331,7 @@ void Load_SPRModel_v1(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &
 	pModel->nModelPosition = 0;
 	pModel->pTriList = (trimodel *)qmalloc(sizeof(trimodel) * pModel->nTriCount);
 	pModel->nNumTextures = 0;
-	pModel->bIsSprite = true;
+	pModel->nModelType = MODEL_SPRITE;
 	pModel->nSpriteType = header->type;
 	e->nShowFlags |= ECLASS_SPRITE;
 
@@ -1209,7 +1372,7 @@ void Load_SPRModel_v2(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &
 	pModel->nModelPosition = 0;
 	pModel->pTriList = (trimodel *)qmalloc(sizeof(trimodel) * pModel->nTriCount);
 	pModel->nNumTextures = 0;
-	pModel->bIsSprite = true;
+	pModel->nModelType = MODEL_SPRITE;
 	pModel->nSpriteType = header->type;
 	if (pModel->bIsEditor) {
 		pModel->nSkinHeight = 12;
@@ -1379,7 +1542,7 @@ void Load_DecalModel(entitymodel *&pModel, qtexture_t *qtex, vec3_t &vMin, vec3_
 	pModel->nModelPosition = 0;
 	pModel->pTriList = (trimodel *)qmalloc(sizeof(trimodel) * pModel->nTriCount);
 	pModel->nNumTextures = 0;
-	pModel->bIsDecal = true;
+	pModel->nModelType = MODEL_DECAL;
 	pModel->nTextureBind[pModel->nNumTextures++] = qtex->texture_number;
 	e->nShowFlags |= ECLASS_DECAL;
 
@@ -1430,3 +1593,14 @@ void Model_DecalView(entitymodel *&pModel, vec3_t normal, vec3_t &vMin, vec3_t &
 		ExtendBounds(pos[i], vMin, vMax);
 	}
 }
+
+
+void Load_MDSModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e) {
+}
+
+void Load_MD4Model(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e) {
+}
+
+void Load_MDMModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e) {
+}
+

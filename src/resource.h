@@ -403,6 +403,8 @@
 #define IDC_TREE_GROUP                  1158
 #define IDC_CHECK_NOSTIPPLE             1159
 #define IDC_TAB_MODE                    1159
+#define IDC_COMBO1                      1160
+#define IDC_ANIM_LIST                   1160
 #define IDC_SLIDER_FALLOFF              1161
 #define IDC_CHECK_POINT                 1162
 #define IDC_CHECK_EQUALRADIUS           1163
@@ -819,7 +821,7 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        193
 #define _APS_NEXT_COMMAND_VALUE         33029
-#define _APS_NEXT_CONTROL_VALUE         1160
+#define _APS_NEXT_CONTROL_VALUE         1161
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

@@ -157,6 +157,4 @@ void SplitList(const char *pszText, const CString &split, CStringArray &list);
 void ExtendBounds(vec3_t v, vec3_t &vMin, vec3_t &vMax);
 void ResetBound(vec3_t &vMin, vec3_t &vMax);
 
-anim_t *FindAnimState(eclass_t *pEclass, char *pszName);
-anim_t *AllocAnimState(char *pszName);
 

@@ -59,9 +59,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define EntAssignSounds 31
 #define EntAssignModels 32
 #define EntCreateEntity 33
-#define EntTab 34
+#define EntAnimList 34
+#define EntTab 35
 
-#define EntLast		35
+#define EntLast		36
 
 extern HWND hwndEnt[EntLast];
 

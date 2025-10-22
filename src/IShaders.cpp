@@ -303,18 +303,11 @@ struct studiohdr_t {
 	int			transitionindex;
 };
 
-/*
-void Test_Proc() {
-	const char *filename = "C:\\Steam\\steamapps\\common\\Half-Life\\valve\\models\\bigrat.mdl";
-	byte *buffer;
-	int len = LoadFile(filename, (void **)&buffer);
-	if (len == -1) {
-		return;
-	}
-
+// test: models/bigrat.mdl
+void Load_MDLModel_v10(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e) {
 	readbuf_t stream;
 	stream.buffer = buffer;
-	stream.size = len;
+	stream.size = -1;
 	stream.offset = 0;
 
 
@@ -322,6 +315,8 @@ void Test_Proc() {
 	assert(header->id == 0x54534449); // IDST
 	assert(header->version == STUDIO_VERSION);
 
+	/*
+	
 	mstudiobone_t *bone = stream.GetIndex<mstudiobone_t>(header->boneindex, header->numbones);
 	mstudiobonecontroller_t *bonectl = stream.GetIndex<mstudiobonecontroller_t>(header->bonecontrollerindex, header->numbonecontrollers);
 	mstudiobbox_t *hitboxes = stream.GetIndex<mstudiobbox_t>(header->hitboxindex, header->numhitboxes);
@@ -340,10 +335,6 @@ void Test_Proc() {
 			// PASS
 		}
 	}
-
+	*/
 	Sys_Printf("Test\n");
-	free(buffer);
 }
-
-
-*/

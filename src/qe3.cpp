@@ -711,7 +711,7 @@ char *CopyString(char *token) {
 }
 
 
-char *Lex_ReadToken(char *&script_p, bool rest_on_line, bool copy_name) {
+char *Lex_ReadToken(char *&script_p, bool rest_on_line, bool copy_name, bool is_file) {
 	int c, len = 0;
 	com_token[0] = '\0';
 	const char *mark = script_p; // check
@@ -785,7 +785,7 @@ skipwhite:
 			if (c == 0) {
 				return nullptr;
 			}
-		} while (isalnum(c) || c == '_');
+		} while (isalnum(c) || c == '_' || ( is_file && (c == '/' || c == '.') ));
 		com_token[len] = 0;
 		if (copy_name) {
 			return CopyString(com_token);

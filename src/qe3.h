@@ -673,7 +673,7 @@ qtexture_t* Texture_LoadTGATexture(unsigned char* pPixels, int nWidth, int nHeig
 qtexture_t* WINAPI QERApp_TryTextureForName(const char* name);
 
 
-char *Lex_ReadToken(char *&script_p, bool rest_on_line = false, bool copy_name = false);
+char *Lex_ReadToken(char *&script_p, bool rest_on_line = false, bool copy_name = false, bool is_file = false);
 bool Lex_ExpectToken(char *&src, const char *expect, bool rest_on_line = false);
 bool Lex_CheckToken(char *&src, const char *expect, bool rest_on_line = false);
 bool Lex_PeekToken(char *&src, const char *expect, bool rest_on_line = false);

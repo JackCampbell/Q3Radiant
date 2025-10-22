@@ -352,33 +352,6 @@ typedef struct brush_s {
 
 
 
-#define MAX_SPRITE_FRAME 64
-typedef struct trimodel_t {
-	vec3_t v[3];
-	float  st[3][2];
-} trimodel;
-
-typedef struct entitymodel_t {
-	struct entitymodel_t *pNext;
-	int				nTriCount;
-	trimodel *		pTriList;
-	int				nTextureBind[MAX_SPRITE_FRAME];
-	int				nNumTextures;
-	int				nSkinWidth;
-	int				nSkinHeight;
-	int				nModelPosition;
-	bool			bIsSprite;
-	int				nSpriteType;
-	bool			bIsDecal;
-	bool			bIsEditor; // editor sprite
-	int				nModelIndex;
-	int				nFrameIndex; // animations
-	vec3_t			vMin, vMax;
-} entitymodel;
-
-
-// eclass show flags
-
 enum {
 	ECLASS_LIGHT = BIT(0),
 	ECLASS_ANGLE = BIT(1),
@@ -400,13 +373,57 @@ enum {
 	ECLASS_PLUGINENTITY = BIT(31)
 };
 
+
+#define MAX_SPRITE_FRAME 64
+typedef struct trimodel_t {
+	vec3_t v[3];
+	float  st[3][2];
+} trimodel;
+
+enum model_e {
+	// MODEL_ANIM,
+	// MODEL_STATIC,
+	MODEL_MESH = 0,
+	MODEL_SPRITE,
+	MODEL_DECAL
+};
+
+
+typedef struct entitymodel_t {
+	struct entitymodel_t *pNext;
+	int				nTriCount;
+	trimodel *		pTriList;
+	int				nTextureBind[MAX_SPRITE_FRAME];
+	int				nNumTextures;
+	int				nSkinWidth;
+	int				nSkinHeight;
+	int				nModelPosition;
+	vec3_t			vMin, vMax;
+	unsigned int	nModelType;
+	int				nSpriteType;
+	bool			bIsEditor;
+	char			strSurfaceName[64];
+} entitymodel;
+
+
+// eclass show flags
+
 struct anim_t {
 	char *				pszName;
 	vec3_t				vMin, vMax;
-	entitymodel *		pModel; // next model is frame index
+	int					nFrameCount;
+	int					nNumFrames;
+	entitymodel **		pFrameList; // next model is frame index
 	anim_t *			pNext;
 };
 
+
+struct spawnflag_t {
+	char *			pstrName;
+	char *			strModel;
+	char *			strAnim;
+	int				nStart, nEnd;
+};
 
 #define	MAX_FLAGS	12
 
@@ -419,16 +436,17 @@ typedef struct eclass_s {
 	vec3_t				color;
 	texdef_t			texdef;
 	char *				comments;
-	char				flagnames[MAX_FLAGS][32];
-	char *				flagmodels[MAX_FLAGS];
-	entitymodel *		model;
+	spawnflag_t			spawnflags[MAX_FLAGS];
+	
 	char *				modelpath;
 	char *				skinpath;
+	char *				strAnim;
+	int					nAnimStart, nAnimEnd; // animati
 	int					nFrame;
 
 	unsigned int		nShowFlags;
 	anim_t *			pAnims;
-	entitymodel *		pMesh; // single mesh
+	entitymodel *		model; // change mesh
 
 	HMODULE				hPlug;
 	epair_t *			epairs; // default pairs

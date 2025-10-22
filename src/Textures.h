@@ -102,4 +102,4 @@ bool WAD2_LoadFile(const char *filepath);
 bool WAD3_LoadFile(const char *filepath);
 void WAD_LoadTexture();
 int SPR_LoadFrame(byte *pic, int pnWidth, int pnHeight);
-
+int Load_SkinFile(brush_t *b, const char *strSurfaceName);

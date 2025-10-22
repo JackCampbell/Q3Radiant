@@ -175,6 +175,15 @@ typedef struct {
 	short		normal;
 } md3XyzNormal_t;
 
+typedef struct {
+	vec3_t mins;
+	vec3_t maxs;
+	vec3_t offset;
+	float scale;
+	char name[16];
+} md3Frame_t;
+
+
 
 typedef struct
 {
