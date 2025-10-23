@@ -1200,7 +1200,7 @@ void LoadJPG(const char *filename, unsigned char **pic, int *width, int *height)
 	}
 
 	// WriteOutTest(fbuffer, nLen, "jpg");
-	LoadJPGBuff(fbuffer, pic, width, height);
+	LoadJPGBuff(fbuffer, pic, width, height, nLen);
 	free(fbuffer);
 }
 

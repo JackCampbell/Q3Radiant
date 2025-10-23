@@ -49,6 +49,9 @@ qboolean VectorCompare (vec3_t v1, vec3_t v2);
 #define VectorCopy(a,b) {b[0]=a[0];b[1]=a[1];b[2]=a[2];}
 #define VectorSet(v, a, b, c) {v[0]=a;v[1]=b;v[2]=c;}
 
+#define VectorCopy2(a,b) { b[0]=a[0];b[1]=a[1]; }
+#define VectorSet2(v, a, b) {v[0]=a;v[1]=b;}
+
 vec_t Q_rint (vec_t in);
 vec_t _DotProduct (vec3_t v1, vec3_t v2);
 void _VectorSubtract (vec3_t va, vec3_t vb, vec3_t out);
@@ -85,5 +88,17 @@ void VectorToAngles( vec3_t vec, vec3_t angles );
 #define RAD2DEG( a ) ( ( (a) * 180.0f ) / Q_PI )
 #define DEG2RAD( a ) ( ( (a) * Q_PI ) / 180.0f )
 
+#define SHORT2ANGLE( x )  ( ( x ) * ( 360.0f / 65536 ) )
+
+float AngleNormalize360(float angle);
+float AngleNormalize180(float angle);
+void VectorLerp(vec3_t vStart, vec3_t vEnd, float flFraction, vec3_t vOut);
+void AnglesToAxis(vec3_t angles, vec3_t axis[3]);
+void Matrix4FromAxisPlusTranslation(vec3_t axis[3], const vec3_t t, vec4_t dst[4]);
+void Matrix4FromScaledAxisPlusTranslation(vec3_t axis[3], const float scale, const vec3_t t, vec4_t dst[4]);
+void Matrix4MultiplyInto3x3AndTranslation(vec4_t a[4], vec4_t b[4], vec3_t dst[3], vec3_t t);
+void LocalScaledMatrixTransformVector(vec3_t in, float s, vec3_t mat[3], vec3_t out);
+void LocalAddScaledMatrixTransformVectorTranslate(vec3_t in, float s, vec3_t mat[3], vec3_t tr, vec3_t out);
+void LocalMatrixTransformVector(vec3_t in, vec3_t mat[3], vec3_t out);
 
 #endif

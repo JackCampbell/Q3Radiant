@@ -127,7 +127,7 @@ void CleanEntityList(eclass_t *&pList) {
 
 void RemoveAnimIndex(char *pos) {
 	int len = strlen(pos);
-	if (IsGame(GAME_Q2) && isdigit(pos[len - 2]) == true) {
+	if (IsGame(GAME_Q2) && isdigit(pos[len - 2])) {
 		pos[len - 2] = 0; // remove last two digit
 		return;
 	}
@@ -396,8 +396,18 @@ eclass_t *Eclass_InitFromText(char *source) {
 		e->nShowFlags |= ECLASS_LIGHT;
 	}
 
-	if (IsGame(GAME_WOLF | GAME_ET) && strcmpi(e->name, "lightJunior") == 0) {
-		e->nShowFlags |= ECLASS_LIGHT;
+	if (IsGame(GAME_WOLF | GAME_ET)) {
+		if (strcmpi(e->name, "lightJunior") == 0 || strcmpi(e->name, "dlight") == 0) {
+			e->nShowFlags |= ECLASS_LIGHT;
+		}
+		if (strcmpi(e->name, "ai_effect") == 0 || strcmpi(e->name, "ai_marker") == 0) {
+			// PASS
+		} else if (e->fixedsize && strnicmp(e->name, "ai_", 3) == 0) {
+			e->nShowFlags |= ECLASS_AI_CHAR;
+		}
+		if (e->fixedsize && strnicmp(e->name, "team_", 5) == 0) {
+			e->nShowFlags |= ECLASS_TEAM_CHAR;
+		}
 	}
 	if (IsGame(GAME_HL)) {
 		if (strcmp(e->name, "env_sprite") == 0) {
@@ -1065,7 +1075,7 @@ void Load_MD2Model(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMa
 }
 
 
-#define VectorCopy2(a,b) { b[0]=a[0];b[1]=a[1]; }
+
 
 void Load_AnimTexture(entitymodel *&pModel, const char *strTexture) {
 	char strTexName[64];
@@ -1595,12 +1605,618 @@ void Model_DecalView(entitymodel *&pModel, vec3_t normal, vec3_t &vMin, vec3_t &
 }
 
 
-void Load_MDSModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e) {
+
+
+modelBone_t mdsSkeletonBones[MDS_MAX_BONES] = { 0 };
+modelDrawVertex_t mdsDrawVertices[MDS_MAX_VERTS] = { 0 };
+
+
+void MDS_SkeletonData(modelBone_t *pBone, int nBoneIndex, mdsBoneInfo_t *pBoneInfo, mdsFrame_t *pFrame, mdsFrame_t *pTorseFrame) {
+	const mdsBoneInfo_t &bi = pBoneInfo[nBoneIndex];
+	bool bIsTorso = false, bFullTorso = false;
+	const mdsBoneFrameCompressed_t *pCompressedTorsoBone = nullptr;
+	if (bi.torsoWeight) {
+		pCompressedTorsoBone = &pTorseFrame->bones[nBoneIndex];
+		bIsTorso = true;
+		if (bi.torsoWeight == 1.0f) {
+			bFullTorso = true;
+		}
+	}
+	bIsTorso = false; // TODO Why !!!!!!
+
+	const mdsBoneFrameCompressed_t &pCompressedBone = pFrame->bones[nBoneIndex];
+	modelBone_t *pParentBone = nullptr;
+	if (bi.parent >= 0) {
+		pParentBone = &mdsSkeletonBones[bi.parent];
+	}
+	vec3_t vAngle, vTorsoAngle;
+	if (bFullTorso) {
+		for (int i = 0; i < 3; i++) {
+			vAngle[i] = SHORT2ANGLE(pCompressedTorsoBone->angles[i]);
+		}
+	} else {
+		for (int i = 0; i < 3; i++) {
+			vAngle[i] = SHORT2ANGLE(pCompressedBone.angles[i]);
+		}
+		if (bIsTorso) {
+			for (int i = 0; i < 3; i++) {
+				vTorsoAngle[i] = SHORT2ANGLE(pCompressedTorsoBone->angles[i]);
+			}
+			for (int i = 0; i < 3; i++) {
+				float diff = vTorsoAngle[i] - vAngle[i];
+				if (fabs(diff) > 180) {
+					diff = AngleNormalize180(diff);
+				}
+				vAngle[i] += vAngle[i] + bi.torsoWeight * diff;
+			}
+		}
+	}
+	AnglesToAxis(vAngle, pBone->vRotate);
+
+	if (pParentBone) {
+		vec3_t vPos, vTorsoPos, vRight, vUp;
+		if (bFullTorso) {
+			vAngle[0] = SHORT2ANGLE(pCompressedTorsoBone->ofsAngles[0]);
+			vAngle[1] = SHORT2ANGLE(pCompressedTorsoBone->ofsAngles[1]);
+			vAngle[2] = 0;
+			AngleVectors(vAngle, vPos, vRight, vUp);
+		} else {
+			vAngle[0] = SHORT2ANGLE(pCompressedBone.ofsAngles[0]);
+			vAngle[1] = SHORT2ANGLE(pCompressedBone.ofsAngles[1]);
+			vAngle[2] = 0;
+			AngleVectors(vAngle, vPos, vRight, vUp);
+			if (bIsTorso) {
+				vAngle[0] = SHORT2ANGLE(pCompressedTorsoBone->ofsAngles[0]);
+				vAngle[1] = SHORT2ANGLE(pCompressedTorsoBone->ofsAngles[1]);
+				vAngle[2] = 0;
+				AngleVectors(vAngle, vTorsoPos, vRight, vUp);
+
+				VectorLerp(vPos, vTorsoPos, bi.torsoWeight, vPos);
+			}
+		}
+		VectorMA(pParentBone->vTranslation, bi.parentDist, vPos, pBone->vTranslation);
+	} else {
+		VectorCopy(pFrame->parentOffset, pBone->vTranslation);
+	}
+	pBone->bCalculate = true;
+	pBone->nParentIndex = bi.parent;
 }
 
+void MDS_SkeletonBind(int *pBoneList, int nBones, mdsBoneInfo_t *pBoneInfo, mdsFrame_t *pFrame, mdsFrame_t *pTorseFrame, int nTorseParent) {
+	int *pBoneRefs = pBoneList;
+	for (int i = 0; i < nBones; i++, pBoneRefs++) {
+		int nBoneIndex = *pBoneRefs;
+
+		const int nParentIndex = pBoneInfo[nBoneIndex].parent;
+		if (nParentIndex >= 0 && !mdsSkeletonBones[nParentIndex].bCalculate) {
+			MDS_SkeletonData(&mdsSkeletonBones[nParentIndex], nParentIndex, pBoneInfo, pFrame, pTorseFrame);
+		}
+		MDS_SkeletonData(&mdsSkeletonBones[nBoneIndex], nBoneIndex, pBoneInfo, pFrame, pTorseFrame);
+	}
+	vec3_t mTorseAxis[3];
+	VectorSet(mTorseAxis[0], 1.0f, 0.0f, 0.0f);
+	VectorSet(mTorseAxis[1], 0.0f, 1.0f, 0.0f);
+	VectorSet(mTorseAxis[2], 0.0f, 0.0f, 1.0f);
+
+	vec3_t vTorsoParentOffset;
+	VectorClear(vTorsoParentOffset);
+	pBoneRefs = pBoneList;
+	for (int i = 0; i < nBones; i++, pBoneRefs++) {
+		int nBoneIndex = *pBoneRefs;
+		if (nBoneIndex == nTorseParent) {
+			VectorCopy(mdsSkeletonBones[nBoneIndex].vTranslation, vTorsoParentOffset);
+		}
+	}
+	float flTorsoWeight = 0.0f;
+	pBoneRefs = pBoneList;
+	for (int i = 0; i < nBones; i++, pBoneRefs++) {
+		int nBoneIndex = *pBoneRefs;
+		const mdsBoneInfo_t &bi = pBoneInfo[nBoneIndex];
+		modelBone_t *pBone = &mdsSkeletonBones[nBoneIndex];
+		if (bi.torsoWeight > 0) {
+			vec3_t vDelta, vTransform, vTotal;
+			if ((bi.flags & BONEFLAG_TAG) == 0) {
+				//float m1[16], m2[16], mOut[16];
+				vec4_t m1[4], m2[4];
+
+				VectorSubtract(pBone->vTranslation, vTorsoParentOffset, vDelta);
+				Matrix4FromAxisPlusTranslation(pBone->vRotate, vDelta, m1);
+				if (flTorsoWeight != bi.torsoWeight) {
+					Matrix4FromScaledAxisPlusTranslation(mTorseAxis, bi.torsoWeight, vTorsoParentOffset, m2);
+					flTorsoWeight = bi.torsoWeight;
+				}
+				Matrix4MultiplyInto3x3AndTranslation(m2, m1, pBone->vRotate, pBone->vTranslation);
+			} else {
+				vec3_t vTemp[3];
+				LocalScaledMatrixTransformVector(pBone->vRotate[0], bi.torsoWeight, mTorseAxis, vTemp[0]);
+				LocalScaledMatrixTransformVector(pBone->vRotate[1], bi.torsoWeight, mTorseAxis, vTemp[1]);
+				LocalScaledMatrixTransformVector(pBone->vRotate[2], bi.torsoWeight, mTorseAxis, vTemp[2]);
+				memcpy(pBone->vRotate, vTemp, sizeof(vTemp));
+				VectorSubtract(pBone->vTranslation, vTorsoParentOffset, vDelta);
+				LocalScaledMatrixTransformVector(pBone->vTranslation, bi.torsoWeight, mTorseAxis, vTemp[2]);
+				VectorAdd(pBone->vTranslation, vTorsoParentOffset, pBone->vTranslation);
+			}
+		}
+	}
+}
+
+void WOLF_FindIdleFrame(eclass_t *e, int &nStartFrame, int &nNumFrame) {
+	char strPath[1024];
+	strcpy(strPath, e->name);
+	StripFilename(strPath);
+	if (IsGame(GAME_ET)) {
+		strcpy(strPath, "animations/human/base/body.aninc");
+	} else {
+		strcat(strPath, "/wolfanim.cfg"); // wolf
+	}
+	
+	char *pMatch = "idle";
+	if (IsGame(GAME_ET)) {
+		pMatch = "idle_no";
+	}
+
+	nStartFrame = 0;
+	nNumFrame = 1;
+
+	char *pBuf;
+	int len = PakLoadFile(strPath, (void **)&pBuf);
+	if (len != -1) {
+		char *pMark = pBuf;
+
+		while (true) {
+			char *strAnimName = Lex_ReadToken(pMark);
+			if (!strAnimName) {
+				break;
+			}
+			if (strstr(strAnimName, pMatch) != 0) {
+				nStartFrame = Lex_IntValue(pMark, true);
+				nNumFrame = Lex_IntValue(pMark, true);
+				break;
+			}
+		}
+		free(pBuf);
+	}
+}
+
+void Load_MDSModel(entitymodel *&pBaseModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e) {
+	readbuf_t stream;
+	stream.buffer = buffer;
+	stream.size = -1;
+	stream.offset = 0;
+
+	mdsHeader_t *header = stream.GetPtr<mdsHeader_t>();
+	if (header->ident != MDS_IDENT || header->version != MDS_VERSION) {
+		return;
+	}
+	int nStartFrame, nNumFrame;
+	WOLF_FindIdleFrame(e, nStartFrame, nNumFrame);
+	const size_t nFrameSize = sizeof(mdsFrame_t) + (header->numBones - 1) * sizeof(mdsBoneFrameCompressed_t);
+	mdsBoneInfo_t *pBoneInfo = stream.GetOffset<mdsBoneInfo_t>(header->ofsBones);
+	anim_t *anim = FindAnimState(e, "idle", true, nNumFrame);
+	for (int a = 0; a < nNumFrame; a++) {
+		int nFrameIndex = nStartFrame + a;
+		int nTorseFrameIndex = nFrameIndex; //  2485;
+		mdsFrame_t *pFrame = stream.GetOffset<mdsFrame_t>(header->ofsFrames + nFrameIndex * nFrameSize);
+		mdsFrame_t *pTorsoFrame = stream.GetOffset<mdsFrame_t>(header->ofsFrames + nTorseFrameIndex * nFrameSize);
+
+		int nIndex = anim->nNumFrames++;
+		anim->pFrameList[nIndex] = (entitymodel_t *)qmalloc(sizeof(entitymodel_t));
+		entitymodel_t *pModel = anim->pFrameList[nIndex];
+
+		int nOffsetSurface = header->ofsSurfaces;
+		for (int s = 0; s < header->numSurfaces; s++) {
+			mdsSurface_t *pSurface = stream.GetOffset<mdsSurface_t>(nOffsetSurface);
+
+			mdsTriangle_t *pIndices = stream.GetOffset<mdsTriangle_t>(nOffsetSurface + pSurface->ofsTriangles);
+			mdsVertex_t *pVertices = stream.GetOffset<mdsVertex_t>(nOffsetSurface + pSurface->ofsVerts);
+			int *pBoneRefs = stream.GetOffset<int>(nOffsetSurface + pSurface->ofsBoneReferences);
+
+			// memset(mdsSkeletonBones, 0x0, sizeof(mdsSkeletonBones));
+			MDS_SkeletonBind(pBoneRefs, pSurface->numBoneReferences, pBoneInfo, pFrame, pTorsoFrame, header->torsoParent);
+
+			int nNumVertices = 0;
+			for (int i = 0; i < pSurface->numVerts; i++) {
+				vec3_t vPos, vNormal;
+				VectorClear(vPos);
+
+				for (int j = 0; j < pVertices->numWeights; j++) {
+					mdsWeight_t *pWeight = &pVertices->weights[j];
+					modelBone_t *pBone = &mdsSkeletonBones[pWeight->boneIndex];
+
+					LocalAddScaledMatrixTransformVectorTranslate(pWeight->offset, pWeight->boneWeight, pBone->vRotate, pBone->vTranslation, vPos);
+				}
+				LocalMatrixTransformVector(pVertices->normal, mdsSkeletonBones[pVertices->weights[0].boneIndex].vRotate, vNormal);
+
+				VectorCopy2(pVertices->texCoords, mdsDrawVertices[nNumVertices].vTexCoord);
+				VectorCopy(vNormal, mdsDrawVertices[nNumVertices].vNormal);
+				VectorCopy(vPos, mdsDrawVertices[nNumVertices].vPos);
+				nNumVertices++;
+
+				pVertices = (mdsVertex_t *)&pVertices->weights[pVertices->numWeights];
+			}
+
+			qtexture_t *qtex = Texture_ForName(pSurface->shader);
+			int nSize = pSurface->numTriangles;
+
+			if (s != 0) {
+				pModel->pNext = (entitymodel_t*)qmalloc(sizeof(entitymodel_t));
+				pModel = pModel->pNext;
+			}
+			pModel->nSkinHeight = qtex->height;
+			pModel->nSkinWidth = qtex->width;
+			pModel->nNumTextures = 0;
+			pModel->nTextureBind[pModel->nNumTextures++] = qtex->texture_number;
+			pModel->nTriCount = nSize;
+			pModel->nModelPosition = 0;
+			pModel->pTriList = (trimodel *)qmalloc(sizeof(trimodel) * nSize);
+			pModel->nModelType = MODEL_MESH;
+			strcpy(pModel->strSurfaceName, pSurface->name);
+			for (int i = 0; i < pSurface->numTriangles; i++) {
+				for (int j = 0; j < 3; j++) {
+					int nVertIndex = pIndices[i].indexes[j];
+					assert(nVertIndex < nNumVertices);
+
+					VectorCopy2(mdsDrawVertices[nVertIndex].vTexCoord, pModel->pTriList[i].st[j]);
+					VectorCopy(mdsDrawVertices[nVertIndex].vPos, pModel->pTriList[i].v[j]);
+					ExtendBounds(mdsDrawVertices[nVertIndex].vPos, vMin, vMax);
+				}
+			}
+			nOffsetSurface += pSurface->ofsEnd;
+		}
+	}
+
+
+}
+
+void WOLF_MDSShowBones(vec3_t vOrigin) {
+	for (int i = 0; i < 32; i++) {
+		vec3_t vec, vPos;
+		modelBone_t *pBone = &mdsSkeletonBones[i];
+		if (!pBone->bCalculate) {
+			continue;
+		}
+		qglLineWidth(1);
+		qglBegin(GL_LINES);
+		for (int j = 0; j < 3; j++) {
+			VectorClear(vec);
+			VectorAdd(pBone->vTranslation, vOrigin, vPos);
+			vec[j] = 1;
+			qglColor3fv(vec);
+			qglVertex3fv(vPos);
+			VectorMA(vPos, 5, pBone->vRotate[j], vec);
+			qglVertex3fv(vec);
+		}
+		qglEnd();
+
+		// connect to our parent if it's valid
+		if (pBone->nParentIndex >= 0) {
+			modelBone_t *pParent = &mdsSkeletonBones[i];
+
+			qglLineWidth(2);
+			qglBegin(GL_LINES);
+			qglColor3f(.6, .6, .6);
+
+			VectorAdd(pBone->vTranslation, vOrigin, vPos);
+			qglVertex3fv(vPos);
+
+			VectorAdd(pBone->vTranslation, vOrigin, vPos);
+			qglVertex3fv(vPos);
+			qglEnd();
+		}
+
+		qglLineWidth(1);
+	}
+}
+
+
+modelBone_t mdxSkeletonBones[MDX_MAX_BONES] = { 0 };
+modelDrawVertex_t mdmDrawVertices[MDM_MAX_VERTS] = { 0 };
+void MDM_SkeletonData(modelBone_t *pBone, int nBoneIndex, mdxBoneInfo_t *pBoneInfo, mdxFrame_t *pFrame, mdxFrame_t *pTorseFrame) {
+	const mdxBoneInfo_t &bi = pBoneInfo[nBoneIndex];
+	bool bIsTorso = false, bFullTorso = false;
+	const mdxBoneFrameCompressed_t *pCompressedTorsoBone = nullptr;
+	if (bi.torsoWeight > 0.0f) {
+		pCompressedTorsoBone = &pTorseFrame->bones[nBoneIndex];
+		bIsTorso = true;
+		if (bi.torsoWeight == 1.0f) {
+			bFullTorso = true;
+		}
+	}
+	bIsTorso = false;
+
+	const mdxBoneFrameCompressed_t &pCompressedBone = pFrame->bones[nBoneIndex];
+	modelBone_t *pParentBone = nullptr;
+	if (bi.parent >= 0) {
+		pParentBone = &mdxSkeletonBones[bi.parent];
+	}
+	vec3_t vAngle, vTorsoAngle;
+	if (bFullTorso) {
+		for (int i = 0; i < 3; i++) {
+			vAngle[i] = SHORT2ANGLE(pCompressedTorsoBone->angles[i]);
+		}
+	} else {
+		for (int i = 0; i < 3; i++) {
+			vAngle[i] = SHORT2ANGLE(pCompressedBone.angles[i]);
+		}
+		if (bIsTorso) {
+			for (int i = 0; i < 3; i++) {
+				vTorsoAngle[i] = SHORT2ANGLE(pCompressedTorsoBone->angles[i]);
+			}
+			for (int i = 0; i < 3; i++) {
+				float diff = vTorsoAngle[i] - vAngle[i];
+				if (fabs(diff) > 180) {
+					diff = AngleNormalize180(diff);
+				}
+				vAngle[i] += vAngle[i] + bi.torsoWeight * diff;
+			}
+		}
+	}
+	AnglesToAxis(vAngle, pBone->vRotate);
+
+	if (pParentBone) {
+		vec3_t vPos, vTorsoPos, vRight, vUp;
+		if (bFullTorso) {
+			vAngle[0] = SHORT2ANGLE(pCompressedTorsoBone->ofsAngles[0]);
+			vAngle[1] = SHORT2ANGLE(pCompressedTorsoBone->ofsAngles[1]);
+			vAngle[2] = 0;
+			AngleVectors(vAngle, vPos, vRight, vUp);
+		} else {
+			vAngle[0] = SHORT2ANGLE(pCompressedBone.ofsAngles[0]);
+			vAngle[1] = SHORT2ANGLE(pCompressedBone.ofsAngles[1]);
+			vAngle[2] = 0;
+			AngleVectors(vAngle, vPos, vRight, vUp);
+			if (bIsTorso) {
+				vAngle[0] = SHORT2ANGLE(pCompressedTorsoBone->ofsAngles[0]);
+				vAngle[1] = SHORT2ANGLE(pCompressedTorsoBone->ofsAngles[1]);
+				vAngle[2] = 0;
+				AngleVectors(vAngle, vTorsoPos, vRight, vUp);
+
+				VectorLerp(vPos, vTorsoPos, bi.torsoWeight, vPos);
+			}
+		}
+		VectorMA(pParentBone->vTranslation, bi.parentDist, vPos, pBone->vTranslation);
+	} else {
+		VectorCopy(pFrame->parentOffset, pBone->vTranslation);
+	}
+	pBone->bCalculate = true;
+	pBone->nParentIndex = bi.parent;
+}
+
+
+void MDM_SkeletonBind(int *pBoneList, int nBones, mdxBoneInfo_t *pBoneInfo, mdxFrame_t *pFrame, mdxFrame_t *pTorseFrame, int nTorseParent) {
+	int *pBoneRefs = pBoneList;
+	for (int i = 0; i < nBones; i++, pBoneRefs++) {
+		int nBoneIndex = *pBoneRefs;
+
+		const int nParentIndex = pBoneInfo[nBoneIndex].parent;
+		if (nParentIndex >= 0 && !mdxSkeletonBones[nParentIndex].bCalculate) {
+			MDM_SkeletonData(&mdxSkeletonBones[nParentIndex], nParentIndex, pBoneInfo, pFrame, pTorseFrame);
+		}
+		MDM_SkeletonData(&mdxSkeletonBones[nBoneIndex], nBoneIndex, pBoneInfo, pFrame, pTorseFrame);
+	}
+	vec3_t mTorseAxis[3];
+	VectorSet(mTorseAxis[0], 1.0f, 0.0f, 0.0f);
+	VectorSet(mTorseAxis[1], 0.0f, 1.0f, 0.0f);
+	VectorSet(mTorseAxis[2], 0.0f, 0.0f, 1.0f);
+
+	vec3_t vTorsoParentOffset;
+	VectorClear(vTorsoParentOffset);
+	pBoneRefs = pBoneList;
+	for (int i = 0; i < nBones; i++, pBoneRefs++) {
+		int nBoneIndex = *pBoneRefs;
+		if (nBoneIndex == nTorseParent) {
+			VectorCopy(mdxSkeletonBones[nBoneIndex].vTranslation, vTorsoParentOffset);
+		}
+	}
+	float flTorsoWeight = 0.0f;
+	pBoneRefs = pBoneList;
+	for (int i = 0; i < nBones; i++, pBoneRefs++) {
+		int nBoneIndex = *pBoneRefs;
+		const mdxBoneInfo_t &bi = pBoneInfo[nBoneIndex];
+		modelBone_t *pBone = &mdxSkeletonBones[nBoneIndex];
+		if (bi.torsoWeight > 0) {
+			vec3_t vDelta, vTransform, vTotal;
+			vec4_t m1[4], m2[4];
+
+			VectorSubtract(pBone->vTranslation, vTorsoParentOffset, vDelta);
+			Matrix4FromAxisPlusTranslation(pBone->vRotate, vDelta, m1);
+			if (flTorsoWeight != bi.torsoWeight) {
+				Matrix4FromScaledAxisPlusTranslation(mTorseAxis, bi.torsoWeight, vTorsoParentOffset, m2);
+				flTorsoWeight = bi.torsoWeight;
+			}
+			Matrix4MultiplyInto3x3AndTranslation(m2, m1, pBone->vRotate, pBone->vTranslation);
+		}
+	}
+}
+
+
+void Load_MDMModel(entitymodel *&pBaseModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e) {
+	readbuf_t anim_stream, mesh_stream;
+	anim_stream.size = PakLoadFile("animations/human/base/body.mdx", (void **)&anim_stream.buffer);
+	anim_stream.offset = 0;
+	if (anim_stream.size == -1) {
+		return;
+	}
+	mdxHeader_t *pAnimHeader = anim_stream.GetPtr<mdxHeader_t>();
+	if (pAnimHeader->ident != MDX_IDENT || pAnimHeader->version != MDX_VERSION) {
+		free(anim_stream.buffer);
+		return;
+	}
+	const size_t nFrameSize = sizeof(mdxFrame_t) + (pAnimHeader->numBones - 1) * sizeof(mdxBoneFrameCompressed_t);
+	mdxBoneInfo_t *pBoneInfo = anim_stream.GetOffset<mdxBoneInfo_t>(pAnimHeader->ofsBones);
+
+	// new
+	mesh_stream.buffer = buffer;
+	mesh_stream.size = -1;
+	mesh_stream.offset = 0;
+	mdmHeader_t *pMeshHeader = mesh_stream.GetPtr<mdmHeader_t>();
+	if (pMeshHeader->ident != MDM_IDENT || pMeshHeader->version != MDM_VERSION) {
+		free(anim_stream.buffer);
+		return;
+	}
+
+	int nStartFrame, nNumFrame;
+	WOLF_FindIdleFrame(e, nStartFrame, nNumFrame);
+
+	anim_t *anim = FindAnimState(e, "idle", true, nNumFrame);
+	for (int a = 0; a < nNumFrame; a++) {
+
+		int nFrameIndex = nStartFrame + a;
+		mdxFrame_t *pFrame = anim_stream.GetOffset<mdxFrame_t>(pAnimHeader->ofsFrames + nFrameIndex * nFrameSize);
+
+		int nIndex = anim->nNumFrames++;
+		anim->pFrameList[nIndex] = (entitymodel_t *)qmalloc(sizeof(entitymodel_t));
+		entitymodel_t *pModel = anim->pFrameList[nIndex];
+
+		int nOffsetSurface = pMeshHeader->ofsSurfaces;
+		for (int s = 0; s < pMeshHeader->numSurfaces; s++) {
+			mdmSurface_t *pSurface = mesh_stream.GetOffset<mdmSurface_t>(nOffsetSurface);
+			mdmTriangle_t *pIndices = mesh_stream.GetOffset<mdmTriangle_t>(nOffsetSurface + pSurface->ofsTriangles);
+			mdmVertex_t *pVertices = mesh_stream.GetOffset<mdmVertex_t>(nOffsetSurface + pSurface->ofsVerts);
+			int *pBoneRefs = mesh_stream.GetOffset<int>(nOffsetSurface + pSurface->ofsBoneReferences);
+			MDM_SkeletonBind(pBoneRefs, pSurface->numBoneReferences, pBoneInfo, pFrame, pFrame, pAnimHeader->torsoParent);
+
+
+			int nNumVertices = 0;
+			for (int i = 0; i < pSurface->numVerts; i++) {
+				vec3_t vPos, vNormal;
+				VectorClear(vPos);
+
+				for (int j = 0; j < pVertices->numWeights; j++) {
+					mdmWeight_t *pWeight = &pVertices->weights[j];
+					modelBone_t *pBone = &mdxSkeletonBones[pWeight->boneIndex];
+
+					LocalAddScaledMatrixTransformVectorTranslate(pWeight->offset, pWeight->boneWeight, pBone->vRotate, pBone->vTranslation, vPos);
+				}
+				LocalMatrixTransformVector(pVertices->normal, mdxSkeletonBones[pVertices->weights[0].boneIndex].vRotate, vNormal);
+
+				VectorCopy2(pVertices->texCoords, mdmDrawVertices[nNumVertices].vTexCoord);
+				VectorCopy(vNormal, mdmDrawVertices[nNumVertices].vNormal);
+				VectorCopy(vPos, mdmDrawVertices[nNumVertices].vPos);
+				nNumVertices++;
+
+				pVertices = (mdmVertex_t *)&pVertices->weights[pVertices->numWeights];
+			}
+
+			qtexture_t *qtex = Texture_ForName(pSurface->shader);
+			int nSize = pSurface->numTriangles;
+
+			if (s != 0) {
+				pModel->pNext = (entitymodel_t*)qmalloc(sizeof(entitymodel_t));
+				pModel = pModel->pNext;
+			}
+			pModel->nSkinHeight = qtex->height;
+			pModel->nSkinWidth = qtex->width;
+			pModel->nNumTextures = 0;
+			pModel->nTextureBind[pModel->nNumTextures++] = qtex->texture_number;
+			pModel->nTriCount = nSize;
+			pModel->nModelPosition = 0;
+			pModel->pTriList = (trimodel *)qmalloc(sizeof(trimodel) * nSize);
+			pModel->nModelType = MODEL_MESH;
+			strcpy(pModel->strSurfaceName, pSurface->name);
+			for (int i = 0; i < pSurface->numTriangles; i++) {
+				for (int j = 0; j < 3; j++) {
+					int nVertIndex = pIndices[i].indexes[j];
+					assert(nVertIndex < nNumVertices);
+
+					VectorCopy2(mdmDrawVertices[nVertIndex].vTexCoord, pModel->pTriList[i].st[j]);
+					VectorCopy(mdmDrawVertices[nVertIndex].vPos, pModel->pTriList[i].v[j]);
+					ExtendBounds(mdmDrawVertices[nVertIndex].vPos, vMin, vMax);
+				}
+			}
+			nOffsetSurface += pSurface->ofsEnd;
+		}
+	}
+	free(anim_stream.buffer);
+}
+
+
+
+
+modelDrawVertex_t md4DrawVertices[MDS_MAX_VERTS] = { 0 };
 void Load_MD4Model(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e) {
+	readbuf_t stream;
+	stream.buffer = buffer;
+	stream.size = -1;
+	stream.offset = 0;
+
+	md4Header_t *pHeader = stream.GetPtr<md4Header_t>();
+
+	md4Frame_t *pFrame = stream.GetOffset<md4Frame_t>(pHeader->ofsFrames);
+
+	anim_t *anim = FindAnimState(e, "idle", true, 1);
+
+	int nOffsetLOD = pHeader->ofsLODs;
+	// for (int i = 0; i < pHeader->numLODs; i++) 
+	{	// Make First LOD
+		md4LOD_t *pLOD = stream.GetOffset<md4LOD_t>(nOffsetLOD);
+
+		int nIndex = anim->nNumFrames++;
+		anim->pFrameList[nIndex] = (entitymodel_t *)qmalloc(sizeof(entitymodel_t));
+		entitymodel_t *pModel = anim->pFrameList[nIndex];
+
+		int nOffsetSurface = nOffsetLOD + pLOD->ofsSurfaces;
+		for (int s = 0; s < pLOD->numSurfaces; s++) {
+			md4Surface_t *pSurface = stream.GetOffset<md4Surface_t>(nOffsetSurface);
+			md4Vertex_t *pVertex = stream.GetOffset<md4Vertex_t>(nOffsetSurface + pSurface->ofsVerts);
+			md4Triangle_t *pIndices = stream.GetOffset<md4Triangle_t>(nOffsetSurface + pSurface->ofsTriangles);
+
+			int nNumVertices = 0;
+			for (int i = 0; i < pSurface->numVerts; i++) {
+				vec3_t vPos, vNormal;
+				VectorClear(vPos);
+				for (int j = 0; j < pVertex->numWeights; j++) {
+					md4Weight_t *pWeight = &pVertex->weights[j];
+					md4Bone_t *pBones = &pFrame->bones[pWeight->boneIndex];
+
+					vPos[0] += pWeight->boneWeight * (DotProduct(pBones->matrix[0], pWeight->offset) + pBones->matrix[0][3]);
+					vPos[1] += pWeight->boneWeight * (DotProduct(pBones->matrix[1], pWeight->offset) + pBones->matrix[1][3]);
+					vPos[2] += pWeight->boneWeight * (DotProduct(pBones->matrix[2], pWeight->offset) + pBones->matrix[2][3]);
+
+					vNormal[0] += pWeight->boneWeight * DotProduct(pBones->matrix[0], pVertex->normal);
+					vNormal[1] += pWeight->boneWeight * DotProduct(pBones->matrix[1], pVertex->normal);
+					vNormal[2] += pWeight->boneWeight * DotProduct(pBones->matrix[2], pVertex->normal);
+				}
+				VectorCopy2(pVertex->texCoords, md4DrawVertices[nNumVertices].vTexCoord);
+				VectorCopy(vNormal, md4DrawVertices[nNumVertices].vNormal);
+				VectorCopy(vPos, md4DrawVertices[nNumVertices].vPos);
+				nNumVertices++;
+
+				pVertex = (md4Vertex_t *)&pVertex->weights[pVertex->numWeights];
+			}
+
+			qtexture_t *qtex = Texture_ForName(pSurface->shader);
+			int nSize = pSurface->numTriangles;
+
+			if (s != 0) {
+				pModel->pNext = (entitymodel_t*)qmalloc(sizeof(entitymodel_t));
+				pModel = pModel->pNext;
+			}
+			pModel->nSkinHeight = qtex->height;
+			pModel->nSkinWidth = qtex->width;
+			pModel->nNumTextures = 0;
+			pModel->nTextureBind[pModel->nNumTextures++] = qtex->texture_number;
+			pModel->nTriCount = nSize;
+			pModel->nModelPosition = 0;
+			pModel->pTriList = (trimodel *)qmalloc(sizeof(trimodel) * nSize);
+			pModel->nModelType = MODEL_MESH;
+			strcpy(pModel->strSurfaceName, pSurface->name);
+			for (int i = 0; i < pSurface->numTriangles; i++) {
+				for (int j = 0; j < 3; j++) {
+					int nVertIndex = pIndices[i].indexes[j];
+					assert(nVertIndex < nNumVertices);
+
+					VectorCopy2(md4DrawVertices[nVertIndex].vTexCoord, pModel->pTriList[i].st[j]);
+					VectorCopy(md4DrawVertices[nVertIndex].vPos, pModel->pTriList[i].v[j]);
+					ExtendBounds(md4DrawVertices[nVertIndex].vPos, vMin, vMax);
+				}
+			}
+
+
+			nOffsetSurface += pSurface->ofsEnd;
+		}
+		// nOffsetLOD += pLOD->ofsEnd;
+	}
 }
 
-void Load_MDMModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e) {
-}
 

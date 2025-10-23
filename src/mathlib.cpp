@@ -288,3 +288,94 @@ void DegToAngle(int deg, vec3_t angles) {
 		VectorSet(angles, 0, deg, 0);
 	}
 }
+
+
+
+
+float AngleNormalize360(float angle) {
+	return (360.0f / 65536) * ((int)(angle * (65536 / 360.0f)) & 65535);
+}
+float AngleNormalize180(float angle) {
+	angle = AngleNormalize360(angle);
+	if (angle > 180.0) {
+		angle -= 360.0;
+	}
+	return angle;
+}
+
+void VectorLerp(vec3_t vStart, vec3_t vEnd, float flFraction, vec3_t vOut) {
+	float flInvert = 1.0f - flFraction;
+	for (int i = 0; i < 3; i++) {
+		vOut[i] = vStart[i] * flInvert + vEnd[i] * flFraction;
+	}
+	VectorNormalize(vOut);
+}
+
+void AnglesToAxis(vec3_t angles, vec3_t axis[3]) {
+	vec3_t right;
+	AngleVectors(angles, axis[0], right, axis[2]);
+	VectorSubtract(vec3_origin, right, axis[1]);
+}
+
+void Matrix4FromAxisPlusTranslation(vec3_t axis[3], const vec3_t t, vec4_t dst[4]) {
+	int i, j;
+	for (i = 0; i < 3; i++) {
+		for (j = 0; j < 3; j++) {
+			dst[i][j] = axis[i][j];
+		}
+		dst[3][i] = 0;
+		dst[i][3] = t[i];
+	}
+	dst[3][3] = 1;
+}
+void Matrix4FromScaledAxisPlusTranslation(vec3_t axis[3], const float scale, const vec3_t t, vec4_t dst[4]) {
+	int i, j;
+
+	for (i = 0; i < 3; i++) {
+		for (j = 0; j < 3; j++) {
+			dst[i][j] = scale * axis[i][j];
+			if (i == j) {
+				dst[i][j] += 1.0f - scale;
+			}
+		}
+		dst[3][i] = 0;
+		dst[i][3] = t[i];
+	}
+	dst[3][3] = 1;
+}
+
+void Matrix4MultiplyInto3x3AndTranslation(vec4_t a[4], vec4_t b[4], vec3_t dst[3], vec3_t t) {
+	dst[0][0] = a[0][0] * b[0][0] + a[0][1] * b[1][0] + a[0][2] * b[2][0] + a[0][3] * b[3][0];
+	dst[0][1] = a[0][0] * b[0][1] + a[0][1] * b[1][1] + a[0][2] * b[2][1] + a[0][3] * b[3][1];
+	dst[0][2] = a[0][0] * b[0][2] + a[0][1] * b[1][2] + a[0][2] * b[2][2] + a[0][3] * b[3][2];
+	t[0] = a[0][0] * b[0][3] + a[0][1] * b[1][3] + a[0][2] * b[2][3] + a[0][3] * b[3][3];
+
+	dst[1][0] = a[1][0] * b[0][0] + a[1][1] * b[1][0] + a[1][2] * b[2][0] + a[1][3] * b[3][0];
+	dst[1][1] = a[1][0] * b[0][1] + a[1][1] * b[1][1] + a[1][2] * b[2][1] + a[1][3] * b[3][1];
+	dst[1][2] = a[1][0] * b[0][2] + a[1][1] * b[1][2] + a[1][2] * b[2][2] + a[1][3] * b[3][2];
+	t[1] = a[1][0] * b[0][3] + a[1][1] * b[1][3] + a[1][2] * b[2][3] + a[1][3] * b[3][3];
+
+	dst[2][0] = a[2][0] * b[0][0] + a[2][1] * b[1][0] + a[2][2] * b[2][0] + a[2][3] * b[3][0];
+	dst[2][1] = a[2][0] * b[0][1] + a[2][1] * b[1][1] + a[2][2] * b[2][1] + a[2][3] * b[3][1];
+	dst[2][2] = a[2][0] * b[0][2] + a[2][1] * b[1][2] + a[2][2] * b[2][2] + a[2][3] * b[3][2];
+	t[2] = a[2][0] * b[0][3] + a[2][1] * b[1][3] + a[2][2] * b[2][3] + a[2][3] * b[3][3];
+}
+
+void LocalScaledMatrixTransformVector(vec3_t in, float s, vec3_t mat[3], vec3_t out) {
+	out[0] = (1.0f - s) * in[0] + s * (in[0] * mat[0][0] + in[1] * mat[0][1] + in[2] * mat[0][2]);
+	out[1] = (1.0f - s) * in[1] + s * (in[0] * mat[1][0] + in[1] * mat[1][1] + in[2] * mat[1][2]);
+	out[2] = (1.0f - s) * in[2] + s * (in[0] * mat[2][0] + in[1] * mat[2][1] + in[2] * mat[2][2]);
+}
+
+void LocalAddScaledMatrixTransformVectorTranslate(vec3_t in, float s, vec3_t mat[3], vec3_t tr, vec3_t out) {
+	out[0] += s * (in[0] * mat[0][0] + in[1] * mat[0][1] + in[2] * mat[0][2] + tr[0]);
+	out[1] += s * (in[0] * mat[1][0] + in[1] * mat[1][1] + in[2] * mat[1][2] + tr[1]);
+	out[2] += s * (in[0] * mat[2][0] + in[1] * mat[2][1] + in[2] * mat[2][2] + tr[2]);
+}
+
+void LocalMatrixTransformVector(vec3_t in, vec3_t mat[3], vec3_t out) {
+	out[0] = in[0] * mat[0][0] + in[1] * mat[0][1] + in[2] * mat[0][2];
+	out[1] = in[0] * mat[1][0] + in[1] * mat[1][1] + in[2] * mat[1][2];
+	out[2] = in[0] * mat[2][0] + in[1] * mat[2][1] + in[2] * mat[2][2];
+}
+

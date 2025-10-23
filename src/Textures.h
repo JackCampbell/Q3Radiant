@@ -103,3 +103,5 @@ bool WAD3_LoadFile(const char *filepath);
 void WAD_LoadTexture();
 int SPR_LoadFrame(byte *pic, int pnWidth, int pnHeight);
 int Load_SkinFile(brush_t *b, const char *strSurfaceName);
+void WAD3_ConvertPalToRGBA(byte *src, byte *pal, byte *out, int size, char *name, bool is_decal);
+

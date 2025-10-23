@@ -3315,6 +3315,7 @@ eclass_t *HasModel(brush_t *b) {
 	vec3_t vMin, vMax;
 	vec3_t vAngle;
 	eclass_t *e = NULL;
+	char strPath[1024];
 
 	ResetBound(vMin, vMax);
 	// FIXME: entity needs to track whether a cache hit failed and not ask again
@@ -3328,6 +3329,12 @@ eclass_t *HasModel(brush_t *b) {
 			}
 			if (strModel.IsEmpty()) {
 				strModel = ValueForKey(b->owner, "model3");
+			}
+			CString strSkin = ValueForKey(b->owner, "skin");
+			if (b->owner->eclass->nShowFlags & ECLASS_AI_CHAR && !strSkin.IsEmpty()) {
+				int iStart = 0;
+				strSkin.Replace("\\", "/");
+				strModel.Format("models/players/%s/body.mds", strSkin.Tokenize("/", iStart));
 			}
 		} else if (IsGame(GAME_HL)) {
 			if (b->owner->eclass->nShowFlags & ECLASS_BEAM) {
@@ -3442,7 +3449,12 @@ entitymodel_t *FindRenderModel(eclass_t *pEclass, brush_t *b, const double curre
 			return anim->pFrameList[nFrame];
 		}
 	}
-	anim_t *anim = pEclass->pAnims; // first anim
+	anim_t *anim = FindAnimState(pEclass, "idle", false, 0);
+	if (anim) {
+		int nFrame = GetNextFrame(anim, -1, -1, current_time);
+		return anim->pFrameList[nFrame];
+	}
+	anim = pEclass->pAnims; // first anim
 	if (anim) {
 		return anim->pFrameList[0];
 	}
@@ -3528,9 +3540,20 @@ bool PaintedModel(brush_t *b, bool bOkToTexture) {
 					skin = int(current_time * 10) % model->nNumTextures;
 				}
 			}
+
+			vec3_t v;
+
+			int i, j;
+			VectorAdd(b->maxs, b->mins, v);
+			VectorScale(v, 0.5, v);
+			VectorCopy(b->owner->origin, v);
+
+
 			int nTex = -1;
-			if (IsGame(GAME_ET)) {
-				nTex = Load_SkinFile(b, model->strSurfaceName);
+
+			// char *strSkinValue = ValueForKey(b->owner, "skin");
+			if (IsGame(GAME_ID3) && (b->owner->eclass->nShowFlags & (ECLASS_AI_CHAR | ECLASS_TEAM_CHAR | ECLASS_MISCMODEL)) != 0) {
+				nTex = Load_SkinFile(b,  model->strSurfaceName);
 			}
 			if (nTex == -1 && skin < model->nNumTextures) {
 				nTex = model->nTextureBind[skin];
@@ -3554,12 +3577,7 @@ bool PaintedModel(brush_t *b, bool bOkToTexture) {
 				qglEnable(GL_TEXTURE_2D);
 				qglBindTexture(GL_TEXTURE_2D, nTex);
 			}
-			vec3_t v;
-
-			int i, j;
-			VectorAdd(b->maxs, b->mins, v);
-			VectorScale(v, 0.5, v);
-			VectorCopy(b->owner->origin, v);
+			
 
 #if 0
 			float s = 0.0f, c = 1.0f;
@@ -4046,7 +4064,7 @@ void Brush_Draw(brush_t *b) {
 	if (b->owner->eclass->fixedsize) {
 
 		// if (!(g_qeglobals.d_savedinfo.exclude & EXCLUDE_ANGLES) && b->bModelFailed) 
-		{
+		if (b->bModelFailed) {
 			Brush_DrawFacingAngle(b, b->owner);
 		}
 
@@ -4118,6 +4136,8 @@ void Brush_Draw(brush_t *b) {
 		} else {
 			qglColor3fv(face->d_color);
 		}
+
+		
 
 		// shader drawing stuff
 		if (face->d_texture->bFromShader) {

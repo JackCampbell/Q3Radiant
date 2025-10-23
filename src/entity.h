@@ -99,4 +99,6 @@ epair_t* ParseEpair(void);
 char *ValueForKey(epair_t *&e, const char *key);
 
 anim_t *FindAnimState(eclass_t *pEclass, char *pszName, bool makeAnim, int nFrameCount);
+void WOLF_FindIdleFrame(eclass_t *e, int &nStartFrame, int &nNumFrame);
+
 

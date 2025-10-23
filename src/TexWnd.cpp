@@ -3052,29 +3052,72 @@ public:
 
 CPtrArray g_listSkinLine;
 
-int Load_SkinFile(brush_t *b, const char *strSurfaceName) {
-	const char *strSkinPath = ValueForKey(b->owner, "skin");
-	qtexture_t *qtex;
+char *WOLF_GetSkinPath(char *strSkinValue, brush_t *b) {
+	static char cSkin[1024];
+	char cTemp[1024];
 
-	if (strSkinPath[0] == 0) {
+	strcpy(cSkin, strSkinValue);
+	QE_ConvertDOSToUnixName(cSkin, cSkin);
+
+	if (cSkin[0] == 0 && b->owner->eclass->nShowFlags & ECLASS_AI_CHAR) {
+		strcpy(cSkin, b->owner->md3Class->name);
+		StripFilename(cSkin);
+		strcat(cSkin, "body_default.skin");
+	}
+	if (strncmp(cSkin, "models/", 7) != 0) {
+		strcpy(cTemp, cSkin);
+		char *pMark = strchr(cTemp, '/');
+		if (pMark) {
+			*pMark++ = 0;
+		} else {
+			pMark = "default";
+		}
+		sprintf(cSkin, "models/players/%s/body_%s.skin", cTemp, pMark);
+	}
+	return cSkin;
+}
+
+int Load_SkinFile(brush_t *b, const char *strSurfaceName) {
+	qtexture_t *qtex;
+	char cSkin[1024], cTemp[1024];
+
+	char *strSkinName = ValueForKey(b->owner, "skin", b->owner->eclass->skinpath);
+	if (!strSkinName || strSkinName[0] == 0) {
 		return -1;
 	}
+	strcpy(cSkin, strSkinName);
+	QE_ConvertDOSToUnixName(cSkin, cSkin);
+	if (strncmp(cSkin, "models/", 7) != 0) {
+		strcpy(cTemp, cSkin);
+		char *pMark = strchr(cTemp, '/');
+		if (pMark) {
+			*pMark++ = 0;
+		} else {
+			pMark = "default";
+		}
+		sprintf(cSkin, "models/players/%s/body_%s.skin", cTemp, pMark);
+	}
+
 	for (int i = 0; i < g_listSkinLine.GetCount(); i++) {
 		CSkinLine *line = (CSkinLine *)g_listSkinLine.GetAt(i);
-		if (line->strName == strSkinPath) {
+		if (line->strName == strSkinName) {
 			if (line->listTextures.Lookup(strSurfaceName, qtex)) {
 				return qtex->texture_number;
 			}
 			return -1;
 		}
 	}
+
+	// make empty
+	CSkinLine *line = new CSkinLine();
+	line->strName = strSkinName;
+	g_listSkinLine.Add(line);
+
 	char *pBuf;
-	if (PakLoadFile(strSkinPath, (void **)&pBuf) == -1) {
+	int nLen = PakLoadFile(cSkin, (void **)&pBuf);
+	if (nLen == -1) {
 		return -1;
 	}
-
-	CSkinLine *line = new CSkinLine();
-	line->strName = strSkinPath;
 
 	char *mark = pBuf;
 	while (mark) {
@@ -3088,10 +3131,8 @@ int Load_SkinFile(brush_t *b, const char *strSurfaceName) {
 		qtex = Texture_ForName(pShaderName);
 		line->listTextures.SetAt(name, qtex);
 	}
-	g_listSkinLine.Add(line);
 	free(pBuf);
 
-	
 	if (line->listTextures.Lookup(strSurfaceName, qtex)) {
 		return qtex->texture_number;
 	}

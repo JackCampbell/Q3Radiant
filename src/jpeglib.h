@@ -42,7 +42,7 @@ extern "C"
 #define	INT32	int
 #endif
 
-extern void LoadJPGBuff(unsigned char *fbuffer, unsigned char **pic, int *width, int *height );
+extern void LoadJPGBuff(unsigned char *fbuffer, unsigned char **pic, int *width, int *height, int nSize );
 // rad end
 
 

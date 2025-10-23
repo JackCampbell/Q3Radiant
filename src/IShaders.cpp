@@ -303,38 +303,166 @@ struct studiohdr_t {
 	int			transitionindex;
 };
 
+void VectorTransform(const vec3_t in1, const float in2[3][4], vec3_t out) {
+	out[0] = DotProduct(in1, in2[0]) + in2[0][3];
+	out[1] = DotProduct(in1, in2[1]) + in2[1][3];
+	out[2] = DotProduct(in1, in2[2]) + in2[2][3];
+}
+
+float g_bonetransform[MAXSTUDIOBONES][3][4];
+struct {
+	vec3_t	pos;
+	vec2_t	st;
+} stTempVertex[4096];
+
 // test: models/bigrat.mdl
 void Load_MDLModel_v10(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e) {
 	readbuf_t stream;
 	stream.buffer = buffer;
 	stream.size = -1;
 	stream.offset = 0;
-
+	return;
 
 	studiohdr_t *header = stream.GetPtr<studiohdr_t>();
 	assert(header->id == 0x54534449); // IDST
 	assert(header->version == STUDIO_VERSION);
 
-	/*
+	int m_sequence = 0;
+
+	mstudiobone_t *pbones = stream.GetOffset<mstudiobone_t>(header->boneindex, header->numbones);
+	mstudioseqdesc_t *pseqdesc = stream.GetOffset<mstudioseqdesc_t>(header->seqindex, header->numseq) + m_sequence;
 	
-	mstudiobone_t *bone = stream.GetIndex<mstudiobone_t>(header->boneindex, header->numbones);
-	mstudiobonecontroller_t *bonectl = stream.GetIndex<mstudiobonecontroller_t>(header->bonecontrollerindex, header->numbonecontrollers);
-	mstudiobbox_t *hitboxes = stream.GetIndex<mstudiobbox_t>(header->hitboxindex, header->numhitboxes);
-	mstudioseqdesc_t *seqdesc = stream.GetIndex<mstudioseqdesc_t>(header->seqindex, header->numseq);
-	mstudioseqgroup_t *seqgroup = stream.GetIndex<mstudioseqgroup_t>(header->seqgroupindex, header->numseqgroups);
-	mstudiotexture_t *textures = stream.GetIndex<mstudiotexture_t>(header->textureindex, header->numtextures);
+	mstudioseqgroup_t *seqgroup = stream.GetOffset<mstudioseqgroup_t>(header->seqgroupindex, header->numseqgroups) + pseqdesc->seqgroup;
 
-
-
-	short *skins = stream.GetIndex<short>(header->skinindex, 1);
-	mstudiobodyparts_t *bodyparts = stream.GetIndex<mstudiobodyparts_t>(header->bodypartindex, header->numbodyparts);
-	mstudioattachment_t *attachment = stream.GetIndex<mstudioattachment_t>(header->attachmentindex, header->numattachments);
-
-	for (int b = 0; b < header->numbodyparts; b++) {
-		for (int m = 0; m < bodyparts->nummodels; m++) {
-			// PASS
+	// mstudiobonecontroller_t *bonectl = stream.GetOffset<mstudiobonecontroller_t>(header->bonecontrollerindex, header->numbonecontrollers);
+	// mstudiobbox_t *hitboxes = stream.GetOffset<mstudiobbox_t>(header->hitboxindex, header->numhitboxes);
+	// mstudioattachment_t *attachment = stream.GetOffset<mstudioattachment_t>(header->attachmentindex, header->numattachments);
+	
+	static vec3_t		pos[MAXSTUDIOBONES];
+	float				bonematrix[3][4];
+	static vec4_t		q[MAXSTUDIOBONES];
+	mstudioanim_t *panim = nullptr;
+	if (pseqdesc->seqgroup == 0) {
+		panim = stream.GetOffset<mstudioanim_t>(pseqdesc->animindex);
+	} else {
+		assert(false); // TODO
+	}
+	/*
+	CalcRotations(pos, q, pseqdesc, panim, m_frame);
+	for (int i = 0; i < header->numbones; i++) {
+		QuaternionMatrix(q[i], bonematrix);
+		bonematrix[0][3] = pos[i][0];
+		bonematrix[1][3] = pos[i][1];
+		bonematrix[2][3] = pos[i][2];
+		if (pbones[i].parent == -1) {
+			memcpy(g_bonetransform[i], bonematrix, sizeof(float) * 12);
+		} else {
+			R_ConcatTransforms(g_bonetransform[pbones[i].parent], bonematrix, g_bonetransform[i]);
 		}
 	}
 	*/
+
+	mstudiotexture_t *textures = stream.GetOffset<mstudiotexture_t>(header->textureindex, header->numtextures);
+	for (int i = 0; i < header->numtextures; i++) {
+		int size = textures[i].width * textures[i].height;
+		byte *pix = stream.GetOffset<byte>(textures[i].index);
+		byte *pal = stream.GetOffset<byte>(textures[i].index + size);
+		
+		byte *out = (byte *)qmalloc(sizeof(byte) * (size * 4));
+		WAD3_ConvertPalToRGBA(pix, pal, out, size, textures[i].name, false);
+
+		qtexture_t *q = Texture_LoadTGATexture(out, textures[i].width, textures[i].height, nullptr, 0, 0, 0);
+		strncpy(q->name, textures[i].name, sizeof(q->name) - 1);
+		StripExtension(q->name);
+		q->inuse = true;
+		q->next = g_qeglobals.d_qtextures;
+		g_qeglobals.d_qtextures = q;
+
+		free(out);
+	}
+
+
+	vec2_t st;
+	int numTris = 0;
+	short *pskinref = stream.GetOffset<short>(header->skinindex);
+	for (int k = 0; k < header->numbodyparts; k++) {
+		mstudiobodyparts_t *pbodyparts = stream.GetOffset<mstudiobodyparts_t>(header->bodypartindex, header->numbodyparts) + k;
+		for (int j = 0; j < pbodyparts->nummodels; j++) {
+			mstudiomodel_t *pmodel = stream.GetOffset<mstudiomodel_t>(pbodyparts->modelindex) + j;
+			vec3_t *pstudioverts = stream.GetOffset<vec3_t>(pmodel->vertindex);
+			vec3_t *pstudionorms = stream.GetOffset<vec3_t>(pmodel->normindex);
+			byte *pvertbone = stream.GetOffset<byte>(pmodel->vertinfoindex);
+			byte *pnormbone = stream.GetOffset<byte>(pmodel->norminfoindex);
+
+			vec3_t *g_pxformverts = (vec3_t *)qmalloc(sizeof(vec3_t) * pmodel->numverts);
+
+			for (int i = 0; i < pmodel->numverts; i++) {
+				// VectorTransform(pstudioverts[i], g_bonetransform[pvertbone[i]], g_pxformverts[i]);
+				VectorCopy(pstudioverts[i], g_pxformverts[i]);
+			}
+
+			for (int l = 0; l < pmodel->nummesh; l++) {
+				mstudiomesh_t *pmesh = stream.GetOffset<mstudiomesh_t>(pmodel->meshindex) + l;
+				short *ptricmds = stream.GetOffset<short>(pmesh->triindex);
+				short pskin = pskinref[pmesh->skinref];
+
+				float s = 1.0f / textures[pskin].width;
+				float t = 1.0f / textures[pskin].height;
+				int i;
+				while ((i = *(ptricmds++))) {
+					bool isFan = false;
+					if (i < 0) {
+						isFan = true;
+						i = -i;
+					}
+					for (; i > 0; i--, ptricmds += 4) {
+						int index = ptricmds[0];
+						// vec3_t pos = g_pxformverts[index];
+						st[0] = ptricmds[2] * s;
+						st[1] = ptricmds[3] * t;
+
+						if (numTris < 3) {
+							VectorCopy(g_pxformverts[index], stTempVertex[numTris].pos);
+							VectorCopy2(st, stTempVertex[numTris].st);
+							numTris++;
+						} else if (isFan) {
+							VectorCopy(stTempVertex[0].pos, stTempVertex[numTris].pos);
+							VectorCopy2(stTempVertex[0].st, stTempVertex[numTris].st);
+							VectorCopy(stTempVertex[numTris - 1].pos, stTempVertex[numTris + 1].pos);
+							VectorCopy2(stTempVertex[numTris - 1].st, stTempVertex[numTris + 1].st);
+							VectorCopy(g_pxformverts[index], stTempVertex[numTris + 2].pos);
+							VectorCopy2(st, stTempVertex[numTris + 2].st);
+							numTris += 3;
+						} else {
+							VectorCopy(stTempVertex[numTris - 2].pos, stTempVertex[numTris].pos);
+							VectorCopy2(stTempVertex[numTris - 2].st, stTempVertex[numTris].st);
+							VectorCopy(stTempVertex[numTris - 1].pos, stTempVertex[numTris + 1].pos);
+							VectorCopy2(stTempVertex[numTris - 1].st, stTempVertex[numTris + 1].st);
+							VectorCopy(g_pxformverts[index], stTempVertex[numTris + 2].pos);
+							VectorCopy2(st, stTempVertex[numTris + 2].st);
+							numTris += 3;
+						}
+					}
+				}
+			}
+			free(g_pxformverts);
+
+
+			int num_size = numTris / 3;
+
+			pModel->nSkinHeight = 4;
+			pModel->nSkinWidth = 4;
+			pModel->nTriCount = num_size;
+			pModel->nModelPosition = 0;
+			pModel->pTriList = (trimodel *)qmalloc(sizeof(trimodel) * num_size);
+			pModel->nTextureBind[pModel->nNumTextures++] = notexture->texture_number;
+
+			for (int i = 0; i < numTris; i++) {
+				VectorCopy(stTempVertex[i].pos, pModel->pTriList[i / 3].v[i % 3]);
+				VectorCopy2(stTempVertex[i].st, pModel->pTriList[i / 3].st[i % 3]);
+			}
+			// Sys_Printf("-- %f %f %f\n", pstudioverts[0], pstudioverts[1], pstudioverts[2]);
+		}
+	}
 	Sys_Printf("Test\n");
 }
