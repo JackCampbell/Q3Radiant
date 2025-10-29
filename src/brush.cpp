@@ -115,6 +115,7 @@ void TextureAxisFromPlane(plane_t *pln, vec3_t xv, vec3_t yv) {
 
 
 
+
 float	lightaxis[3] = { 0.6, 0.8, 1.0 };
 /*
 ================
@@ -338,12 +339,30 @@ void Face_TextureVectors(face_t *f, float STfromXYZ[2][4]) {
 	memset(STfromXYZ, 0, 8 * sizeof(float));
 
 	if (!td->scale[0])
-		td->scale[0] = (g_PrefsDlg.m_bHiColorTextures) ? 0.5 : 1;
+		td->scale[0] = (g_PrefsDlg.m_bHiColorTextures) ? 0.5f : 1.0f;
 	if (!td->scale[1])
-		td->scale[1] = (g_PrefsDlg.m_bHiColorTextures) ? 0.5 : 1;
+		td->scale[1] = (g_PrefsDlg.m_bHiColorTextures) ? 0.5f : 1.0f;
 
+	if (!VectorCompare(f->texdef.UVaxis[0], vec3_origin)) {
+		for (int i = 0; i < 2; i++) {
+			for (int j = 0; j < 3; j++) {
+				if (fabsf(f->texdef.UVaxis[i][j]) < EQUAL_EPSILON) {
+					f->texdef.UVaxis[i][j] = 0.0f;
+				}
+				STfromXYZ[i][j] = f->texdef.UVaxis[i][j] / td->scale[i];
+			}
+		}
+		STfromXYZ[0][3] = td->shift[0];
+		STfromXYZ[1][3] = td->shift[1];
+		for (j = 0; j < 4; j++) {
+			STfromXYZ[0][j] /= q->width;
+			STfromXYZ[1][j] /= q->height;
+		}
+		return;
+	}
 	// get natural texture axis
 	TextureAxisFromPlane(&f->plane, pvecs[0], pvecs[1]);
+	
 
 	// rotate axis
 	if (td->rotate == 0) {
@@ -395,6 +414,9 @@ void Face_TextureVectors(face_t *f, float STfromXYZ[2][4]) {
 		STfromXYZ[1][j] /= q->height;
 	}
 }
+
+
+
 
 /*
 ================
@@ -1767,18 +1789,20 @@ brush_t *Brush_Parse(void) {
 			}
 			GetToken(false);
 			if (strcmp(token, "[") == 0) {
-				GetToken(false); // Vx
-				GetToken(false); // Vy
-				GetToken(false); // Vz
-				GetToken(false); // Vw
+				for (int k = 0; k < 3; k++) {
+					GetToken(false);
+					f->texdef.UVaxis[0][k] = atof(token);
+				}
+				GetToken(false);
 				f->texdef.shift[0] = atoi(token);
 				GetToken(false); // ]
 
 				GetToken(false); // [
-				GetToken(false); // Ux
-				GetToken(false); // Uy
-				GetToken(false); // Uz
-				GetToken(false); // Uw
+				for (int k = 0; k < 3; k++) {
+					GetToken(false);
+					f->texdef.UVaxis[1][k] = atof(token);
+				}
+				GetToken(false);
 				f->texdef.shift[1] = atoi(token);
 				GetToken(false); // ]
 			} else {
@@ -1814,6 +1838,8 @@ brush_t *Brush_Parse(void) {
 
 	return b;
 }
+
+
 
 /*
 =================
@@ -3343,8 +3369,10 @@ eclass_t *HasModel(brush_t *b) {
 				strModel = ValueForKey(b->owner, "texture");
 			} else if (b->owner->eclass->nShowFlags & ECLASS_SPRITE) {
 				strModel = ValueForKey(b->owner, "model");
+			} else if (b->owner->eclass->nShowFlags & ECLASS_MISCMODEL) {
+				strModel = ValueForKey(b->owner, "model");
 			}
-		} else if (IsGame(GAME_Q1 | GAME_HX2)) {
+		} else if (IsGame(GAME_Q1 | GAME_HEXEN2)) {
 			int nFlags = IntForKey(b->owner, "spawnflags", "0");
 			for (int i = 0; i < MAX_FLAGS; i++) {
 				char *pModel = b->owner->eclass->spawnflags[i].strModel;
@@ -3371,13 +3399,11 @@ eclass_t *HasModel(brush_t *b) {
 			VectorAdd(vMax, b->owner->origin, vMax);
 
 			int angle = IntForKey(b->owner, "angle");
-			if ((e->nShowFlags & (ECLASS_SPRITE | ECLASS_BEAM | ECLASS_DECAL)) == 0) {
-				Brush_Resize(b, vMin, vMax);
+			Brush_Resize(b, vMin, vMax);
 
-				if (angle != 0) {
-					VectorSet(vAngle, 0, 0, angle);
-					Brush_Rotate(b, vAngle, b->owner->origin, true);
-				}
+			if (angle != 0) {
+				VectorSet(vAngle, 0, 0, angle);
+				Brush_Rotate(b, vAngle, b->owner->origin, true);
 			}
 			b->bModelFailed = false;
 		} else {
@@ -3449,7 +3475,16 @@ entitymodel_t *FindRenderModel(eclass_t *pEclass, brush_t *b, const double curre
 			return anim->pFrameList[nFrame];
 		}
 	}
-	anim_t *anim = FindAnimState(pEclass, "idle", false, 0);
+	anim_t *anim = FindAnimState(pEclass, "stand", false, 0);
+	if (!anim) {
+		anim = FindAnimState(pEclass, "stand1", false, 0);
+	}
+	if (!anim) {
+		anim = FindAnimState(pEclass, "idle", false, 0);
+	}
+	if (!anim) {
+		anim = FindAnimState(pEclass, "idle_no", false, 0);
+	}
 	if (anim) {
 		int nFrame = GetNextFrame(anim, -1, -1, current_time);
 		return anim->pFrameList[nFrame];
@@ -3462,7 +3497,30 @@ entitymodel_t *FindRenderModel(eclass_t *pEclass, brush_t *b, const double curre
 	return pEclass->model;
 }
 
+CMap<CString, LPCSTR, qtexture_t *, qtexture_t *> g_kpSkins;
+char *g_kpPrefixBodyName[3] = { "head", "body", "legs" };
+int KP_GetArtSkin(brush_t *b, int nMeshId) {
+#if 1
+	vec3_t vSkin;
+	char cSkin[1024];
+	VectorClear(vSkin);
 
+	char *prefix[3] = { "head", "body", "legs" };
+	GetVectorForKey(b->owner, "art_skins", vSkin);
+	if (VectorLength(vSkin) == 0) {
+		return -1;
+	}
+	sprintf(cSkin, "%s%s_%03d.tga", b->owner->md3Class->name, g_kpPrefixBodyName[nMeshId], (int)vSkin[nMeshId]);
+	qtexture_t *qtex;
+	if (!g_kpSkins.Lookup(cSkin, qtex)) {
+		qtex = Texture_ForName(cSkin);
+		g_kpSkins.SetAt(cSkin, qtex);
+	}
+	return qtex->texture_number;
+#else
+	return -1;
+#endif
+}
 
 static bool g_bInPaintedModel = false;
 static bool g_bDoIt = false;
@@ -3512,8 +3570,8 @@ bool PaintedModel(brush_t *b, bool bOkToTexture) {
 		
 		entitymodel *model = FindRenderModel(pEclass, b, current_time);
 		bool bIsEditor = false;
+		int nIndex = 0;
 		while (model != NULL) {
-			bIsEditor = model->bIsEditor;
 
 			if (model->nTriCount == 0) {
 				model = model->pNext;
@@ -3531,7 +3589,7 @@ bool PaintedModel(brush_t *b, bool bOkToTexture) {
 				} else if (model->nModelType == MODEL_DECAL && pEclass->nShowFlags & ECLASS_DECAL) {
 					skin = HL_DecalView(b, model, current_time);
 				}
-			} else if (IsGame(GAME_Q1 | GAME_HX2)) {
+			} else if (IsGame(GAME_Q1 | GAME_HEXEN2)) {
 				if (model->nModelType == MODEL_SPRITE && pEclass->nShowFlags & ECLASS_SPRITE) {
 					skin = Q_SpriteView(b, model, current_time);
 				} else if (b->owner->eclass->skinpath) {
@@ -3555,6 +3613,9 @@ bool PaintedModel(brush_t *b, bool bOkToTexture) {
 			if (IsGame(GAME_ID3) && (b->owner->eclass->nShowFlags & (ECLASS_AI_CHAR | ECLASS_TEAM_CHAR | ECLASS_MISCMODEL)) != 0) {
 				nTex = Load_SkinFile(b,  model->strSurfaceName);
 			}
+			if (IsGame(GAME_KINGPIN)) {
+				nTex = KP_GetArtSkin(b, model->nModelPosition);
+			}
 			if (nTex == -1 && skin < model->nNumTextures) {
 				nTex = model->nTextureBind[skin];
 			}
@@ -3571,6 +3632,9 @@ bool PaintedModel(brush_t *b, bool bOkToTexture) {
 					Q1_SpriteMode(b->owner);
 				} else if (b->owner->eclass->nShowFlags & ECLASS_MISCMODEL) {
 					Q3_RenderMode(b->owner);
+				} else if(IsGame(GAME_KINGPIN)) {
+					qglDisable(GL_CULL_FACE);
+					qglColor3f(1.0f, 1.0f, 1.0f);
 				} else {
 					qglColor3f(1.0f, 1.0f, 1.0f);
 				}
@@ -3599,6 +3663,9 @@ bool PaintedModel(brush_t *b, bool bOkToTexture) {
 					DegToAngle(deg, angles);
 					bAngle = true;
 				}
+			}
+			if (IsGame(GAME_HL) && (b->owner->eclass->nShowFlags & (ECLASS_SPRITE | ECLASS_BEAM | ECLASS_DECAL)) != 0) {
+				VectorClear(angles);
 			}
 			if (bAngle) {
 				b->owner->vRotation[0] = angles[2];
@@ -4019,7 +4086,7 @@ qtexture_t *Brush_FindTexture(face_t *face, double current_time) {
 	if (IsGame(GAME_Q1) && face->d_texture->name[0] == '+') {
 		char strName[64];
 		strcpy(strName, qtex->name);
-		strName[1] = '0' + (int(current_time) % 2);
+		strName[1] = '0' + (int(current_time * 2) % 2);
 		qtex = Texture_ForName(strName);
 		if (qtex == notexture) {
 			qtex = face->d_texture;
@@ -4125,10 +4192,17 @@ void Brush_Draw(brush_t *b) {
 		}
 
 
+		bool isPushAttribute = false;
 		if (b->patchBrush) {
 			qglColor4f(face->d_color[0], face->d_color[1], face->d_color[2], 0.13);
 		} else if (face->texdef.flags & SURF_EDITOR) {
 			qglColor4f(face->d_color[0], face->d_color[1], face->d_color[2], 0.50);
+		} else if (IsGame(GAME_HL) && b->owner != world_entity) {
+			float alpha = IntForKey(b->owner, "renderamt", "255") / 255.0f;
+			qglColor4f(face->d_color[0], face->d_color[1], face->d_color[2], alpha);
+			// qglPushAttrib(GL_ALL_ATTRIB_BITS);
+			// HL_RenderMode(b->owner, false);
+			// isPushAttribute = true;
 		} else if (face->texdef.flags & SURF_TRANS33) {
 			qglColor4f(face->d_color[0], face->d_color[1], face->d_color[2], 0.33);
 		} else if (face->texdef.flags & SURF_TRANS66) {
@@ -4137,11 +4211,8 @@ void Brush_Draw(brush_t *b) {
 			qglColor3fv(face->d_color);
 		}
 
-		
-
 		// shader drawing stuff
-		if (face->d_texture->bFromShader) {
-			// setup shader drawing
+		if (face->d_texture->bFromShader) { // setup shader drawing
 			qglColor4f(face->d_color[0], face->d_color[1], face->d_color[2], face->d_texture->fTrans);
 
 		}
@@ -4170,16 +4241,29 @@ void Brush_Draw(brush_t *b) {
 					s += camera.render_time * -(speed / 64.0f);
 					t += camera.render_time * 0.0f;
 				} else if (face->texdef.flags & SURF_WARP) {
-					int angle = int(current_time * 4.0) % 360;
+#if 0
+#define TURBSCALE (256.0 / (2 * M_PI))
+					extern float turbsin[];
+					float real_time = 0.0f;
+					float os = s, ot = t;
+					
+					real_time = current_time;
 					// yo = round(V_AMPL * cos(2.0 * PI * (x / H_PERIOD + t / T_PERIOD)));
-					s += sinf(2.0f * Q_PI * angle) * 0.125f;
-					t += cosf(2.0f * Q_PI * angle) * 0.125f;
+					s = os + turbsin[(int)((ot * 0.125f + real_time) * TURBSCALE) & 255];
+					s *= (1.0f / 64.0f);
+					t = ot + turbsin[(int)((os * 0.125f + real_time) * TURBSCALE) & 255];
+					t *= (1.0f / 64.0f);
+#endif
 				}
 				qglTexCoord2f(s, t);
 			}
 			qglVertex3fv(w->points[i]);
 		}
 		qglEnd();
+
+		if (isPushAttribute) {
+			qglPopAttrib();
+		}
 	}
 
 #if 0
@@ -4274,7 +4358,7 @@ bool IsEditorXY(entity_t *e) {
 	if (!e->md3Class->model) {
 		return false;
 	}
-	return e->md3Class->model->bIsEditor;
+	return (e->md3Class->nShowFlags & (ECLASS_SPRITE | ECLASS_BEAM)) != 0;
 }
 
 void Brush_DrawXY(brush_t *b, int nViewType) {

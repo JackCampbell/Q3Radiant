@@ -521,6 +521,7 @@
       <Optimization Condition="'$(Configuration)|$(Platform)'=='ReleaseTTimo|Win32'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
     </ClCompile>
+    <ClCompile Include="eclass_hl.cpp" />
     <ClCompile Include="EditWnd.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='DebugTTimo|Win32'">Disabled</Optimization>
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='DebugTTimo|Win32'">true</BrowseInformation>

@@ -35,7 +35,7 @@
     "game_args" "+set sv_pure 0 +set bot_minplayers 4 +set g_spskill 1 +devmap $"
 }
 {
-    "game" "Wolfenstein"
+    "game" "Wolf"
     "brush_primit" "0"
     "bsp_BuildAAS" "!bspc -threads 1 -ext _b0 -cfg !aascfg_sm.c -bsp2aas $ && !bspc -threads 1 -ext _b1 -cfg !aascfg_lg.c -bsp2aas $"
     "bsp_BuildBSP" "!q3map $ && !q3map -vis $ && !q3map -light -extra $"
@@ -48,26 +48,26 @@
     "game_args" "+set sv_pure 0 /spdevmap $"
 }
 {
-    "game" "EnemyTerritory"
+    "game" "ET"
     "brush_primit" "0"
-    "bsp_Build" "!q3map $ && !q3map -vis $ && !q3map -light -extra $"
     "autosave" "D:\BuildCode\etw\etmain\maps\autosave.map"
     "texturepath" "D:\BuildCode\etw\etmain\textures"
     "entitypath" "D:\BuildCode\etw\src\game\*.c"
     "mapspath" "D:\BuildCode\etw\etmain\maps"
     "remotebasepath" "D:\BuildCode\etw\etmain"
-    "rshcmd" "D:\BuildCode\etw\tools"
+    "rshcmd" "D:\BuildCode\utils\q3map2"
     "basepath" "D:\BuildCode\etw\etmain"
     "game_exec" "ET.exe"
     "game_args" "+set sv_pure 0 +devmap $"
+    "bsp_Build" "!q3map2 -bsp -game et $ && !q3map2 -vis -game et $ && !q3map2 -light -game et $"
 }
 {
-    "game" "Half-Life"
+    "game" "HalfLife"
     "modpath" "C:\Steam\steamapps\common\Half-Life\cmod"
     "basepath" "C:\Steam\steamapps\common\Half-Life\valve"
     "remotebasepath" "C:\Steam\steamapps\common\Half-Life\cmod"
     "rshcmd" "D:\BuildCode\hl\tools"
-    "entitypath" "D:\BuildCode\hl\tools\halflife.def"
+    "entitypath" "D:\BuildCode\radiant\hl\halflife.def"
     "bsp_Build" "!hlcsg $ && !hlbsp $ && !hlvis -full $ && !hlrad -extra $"
     "bsp_Normal" "!hlcsg $ && !hlbsp $ && !hlvis $ && !hlrad $"
     "game_exec" "hl.exe"
@@ -80,6 +80,15 @@
     "rshcmd" "D:\BuildCode\hexen2\tools"
     "entitypath" "D:\BuildCode\hexen2\src\H2MP\hcode\*.hc"
     "game_exec" "glh2.exe"
+    "game_args" "-window -developer +map $"
+}
+{
+    "game" "Kingpin"
+    "basepath" "D:\BuildCode\kingpin\main"
+    "remotebasepath" "D:\BuildCode\kingpin\main"
+    "rshcmd" "D:\BuildCode\kingpin\kprad"
+    "entitypath" "D:\BuildCode\kingpin\src\gamesrc\*.c"
+    "game_exec" "kingpin.exe"
     "game_args" "-window -developer +map $"
 }
 

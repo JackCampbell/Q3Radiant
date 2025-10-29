@@ -715,6 +715,14 @@ struct readbuf_t {
 		this->offset = offset;
 		return GetPtr<type>(count, peek, alloc);
 	}
+
+	template<typename type> type *GetIndex(int offset, int count = 1, int index = 0, bool peek = false, bool alloc = false) {
+		if (count == 0) {
+			return nullptr;
+		}
+		this->offset = offset + index * sizeof(type);
+		return GetPtr<type>(count, peek, alloc);
+	}
 };
 
 
@@ -730,16 +738,32 @@ enum {
 	GAME_Q2 = BIT(1),
 	GAME_Q3 = BIT(2),
 	GAME_WOLF = BIT(3),
-	GAME_HX2 = BIT(4),
+	GAME_HEXEN2 = BIT(4),
 	GAME_HL = BIT(5),
 	GAME_ET = BIT(6),
+	// ADD
+	GAME_KINGPIN = BIT(7),
+	GAME_EF = BIT(8),
+	GAME_JK2 = BIT(9),
+	GAME_SOF2 = BIT(10),
+	GAME_MOHAA = BIT(11),
+	GAME_COD = BIT(12),
 
-	GAME_ID3 = (GAME_Q3 | GAME_WOLF | GAME_ET),
-	GAME_ID1 = (GAME_Q1 | GAME_HX2 | GAME_HL)
+	GAME_ID1 = (GAME_Q1 | GAME_HEXEN2 | GAME_HL),
+	GAME_ID2 = (GAME_Q2 | GAME_KINGPIN),
+	GAME_ID3 = (GAME_Q3 | GAME_WOLF | GAME_ET)
 };
+
+struct game_t {
+	int id;
+	const char *name;
+	entity_t *entity; // referans
+};
+
+extern game_t g_lstGames[];
 
 bool IsGame(int flags);
 bool IsGame(const char *name);
-
+void QE_ProjectList(CString &strData);
 
 #endif

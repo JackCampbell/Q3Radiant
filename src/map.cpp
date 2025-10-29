@@ -356,7 +356,17 @@ void Map_LoadFile(char *filename) {
 	if (ent) {
 		GetVectorForKey(ent, "origin", g_pParentWnd->GetCamera()->Camera().origin);
 		GetVectorForKey(ent, "origin", g_pParentWnd->GetXYWnd()->GetOrigin());
-		g_pParentWnd->GetCamera()->Camera().angles[YAW] = FloatForKey(ent, "angle");
+
+		float yaw = FloatForKey(ent, "angle");
+		if (IsGame(GAME_HL)) {
+			vec3_t vAngle;
+			VectorClear(vAngle);
+			GetVectorForKey(ent, "angles", vAngle);
+			if (vAngle[1] != 0) {
+				yaw = vAngle[1];
+			}
+		}
+		g_pParentWnd->GetCamera()->Camera().angles[YAW] = yaw;
 	} else {
 		g_pParentWnd->GetCamera()->Camera().angles[YAW] = 0;
 		VectorCopy(vec3_origin, g_pParentWnd->GetCamera()->Camera().origin);

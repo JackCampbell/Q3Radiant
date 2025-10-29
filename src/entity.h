@@ -81,10 +81,11 @@ void Load_ASEModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMa
 void Load_MDCModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e, int nModelIndex);
 void Load_MD3Model(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e, int nModelIndex);
 void Load_MD2Model(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e, int nModelIndex);
+void Load_MDXModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e, int nMeshId);
 void Load_BSPModel_v29(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, int nModelIndex);
 void Load_MDLModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e);
 void Load_SPRModel_v1(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e);
-void Load_SPRModel_v2(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e);
+void Load_SPRModel_v2(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e, bool bIsEditor);
 void Load_DecalModel(entitymodel *&pModel, qtexture_t *qtex, vec3_t &vMin, vec3_t &vMax, eclass_t *e);
 void Model_SpriteView(entitymodel *&pModel, vec3_t angles, vec3_t origin, vec3_t &vMin, vec3_t &vMax);
 void Model_BeamView(entitymodel *&pModel, vec3_t start, vec3_t end, int scale, int scroll, vec3_t &vMin, vec3_t &vMax);

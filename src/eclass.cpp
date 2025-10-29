@@ -127,8 +127,10 @@ void CleanEntityList(eclass_t *&pList) {
 
 void RemoveAnimIndex(char *pos) {
 	int len = strlen(pos);
-	if (IsGame(GAME_Q2) && isdigit(pos[len - 2])) {
-		pos[len - 2] = 0; // remove last two digit
+	if (IsGame(GAME_Q2)) {
+		if (isdigit(pos[len - 2])) {
+			pos[len - 2] = 0; // remove last two digit
+		}
 		return;
 	}
 	do {
@@ -221,8 +223,6 @@ void LoadModel(const char *pLocation, eclass_t *e, vec3_t &vMin, vec3_t &vMax, e
 	char cfilename[1024];
 	byte *buffer;
 
-	ResetBound(vMin, vMax);
-	
 	if (IsGame(GAME_HL) && e->nShowFlags & ECLASS_DECAL) {
 		qtexture_t *texture = Texture_ForName(pLocation);
 		Load_DecalModel(pModel, texture, vMin, vMax, e);
@@ -232,13 +232,14 @@ void LoadModel(const char *pLocation, eclass_t *e, vec3_t &vMin, vec3_t &vMax, e
 	QE_ConvertDOSToUnixName(cfilename, pLocation);
 	ExtractFileExtension(cfilename, exts);
 	
+	bool bIsEditor = false;
 	Sys_Printf("Loading model %s...", cfilename);
 	int len = PakLoadFile(cfilename, (void **)&buffer);
-	if (len == -1 && IsGame(GAME_HL) && strcmp(exts, "spr") == 0) {
-		sprintf(cfilename, "%s/sprites/%s", g_strAppPath, pLocation);
+	if (len == -1 && IsGame(GAME_HL)) {
+		sprintf(cfilename, "%s/hl/%s", g_strAppPath, pLocation);
 		len = LoadFile(cfilename, (void **)&buffer);
 		if (len != -1) {
-			pModel->bIsEditor = true;
+			bIsEditor = true;
 		}
 	}
 	if (len == -1 && IsGame(GAME_ET | GAME_WOLF) && strcmp(exts, "md3") == 0) {
@@ -269,9 +270,13 @@ void LoadModel(const char *pLocation, eclass_t *e, vec3_t &vMin, vec3_t &vMax, e
 		} else if (strcmp(exts, "ase") == 0) {
 			Load_ASEModel(pModel, buffer, vMin, vMax, nModelIndex);
 		}
-	} else if (IsGame(GAME_Q2) && strcmp(exts, "md2") == 0) {
-		Load_MD2Model(pModel, buffer, vMin, vMax, e, nModelIndex);
-	} else if (IsGame(GAME_Q1 | GAME_HX2)) {
+	} else if (IsGame(GAME_ID2)) {
+		if (strcmp(exts, "md2") == 0) {
+			Load_MD2Model(pModel, buffer, vMin, vMax, e, nModelIndex);
+		} else if (strcmp(exts, "mdx") == 0) {
+			Load_MDXModel(pModel, buffer, vMin, vMax, e, nModelIndex);
+		}
+	} else if (IsGame(GAME_Q1 | GAME_HEXEN2)) {
 		if (strcmp(exts, "mdl") == 0) {
 			Load_MDLModel(pModel, buffer, vMin, vMax, e);
 		} else if (strcmp(exts, "spr") == 0) {
@@ -281,7 +286,7 @@ void LoadModel(const char *pLocation, eclass_t *e, vec3_t &vMin, vec3_t &vMax, e
 		}
 	} else if (IsGame(GAME_HL)) {
 		if (strcmp(exts, "spr") == 0) {
-			Load_SPRModel_v2(pModel, buffer, vMin, vMax, e);
+			Load_SPRModel_v2(pModel, buffer, vMin, vMax, e, bIsEditor);
 		} else if (strcmp(exts, "mdl") == 0) {
 			Load_MDLModel_v10(pModel, buffer, vMin, vMax, e);
 		}
@@ -429,7 +434,10 @@ eclass_t *Eclass_InitFromText(char *source) {
 			e->nShowFlags |= ECLASS_SOUND;
 		}
 		if (strcmp(e->name, "light_spot") == 0 || strcmp(e->name, "light_environment") == 0) {
-			e->nShowFlags |= ECLASS_LIGHT;
+			// e->nShowFlags |= ECLASS_LIGHT;
+		}
+		if (strcmpi(e->name, "monster_generic") == 0) {
+			e->nShowFlags |= ECLASS_MISCMODEL;
 		}
 	}
 	if (IsGame(GAME_Q1)) {
@@ -458,36 +466,51 @@ eclass_t *Eclass_InitFromText(char *source) {
 	return e;
 }
 
+extern char *g_kpPrefixBodyName[];
 qboolean Eclass_HasModel(eclass_t *e, vec3_t &vMin, vec3_t &vMax) {
 	if (e->modelpath != NULL) {
 		if (e->model == NULL) {
 			e->model = reinterpret_cast<entitymodel_t*>(qmalloc(sizeof(entitymodel_t)));
 		}
-		CStringArray lstModels;
-		SplitList(e->modelpath, ";", lstModels);
+		CString pModelPath, fixModelPath = e->modelpath;
+		ResetBound(vMin, vMax);
 
-		entitymodel *model = e->model;
-		for (int i = 0; i < lstModels.GetCount(); i++) {
-			if (i != 0) {
-				model->pNext = reinterpret_cast<entitymodel_t*>(qmalloc(sizeof(entitymodel_t)));
-				model = model->pNext;
+		entitymodel_t *model = e->model;
+
+		char nPos = fixModelPath.GetLength() - 1;
+		if (IsGame(GAME_KINGPIN) && (fixModelPath[nPos] == '\\' || fixModelPath[nPos] == '/')) {
+			for (int i = 0; i < 3; i++) {
+				if (i != 0) {
+					model->pNext = (entitymodel_t *)qmalloc(sizeof(entitymodel_t));
+					model = model->pNext;
+				}
+				pModelPath.Format("%s%s.mdx", fixModelPath, g_kpPrefixBodyName[i]);
+				LoadModel(pModelPath, e, vMin, vMax, model, i);
 			}
-			CString pModelPath = lstModels.GetAt(i);
-			LoadModel(pModelPath, e, vMin, vMax, model, i);
+			if (e->model->nTriCount == 0) {
+				pModelPath.Format("%stris.md2", fixModelPath);
+				LoadModel(pModelPath, e, vMin, vMax, model, 0);
+			}
+		} else {
+			CStringArray lstModels;
+			SplitList(fixModelPath, ";", lstModels);
+			for (int i = 0; i < lstModels.GetCount(); i++) {
+				if (i != 0) {
+					model->pNext = (entitymodel_t *)qmalloc(sizeof(entitymodel_t));
+					model = model->pNext;
+				}
+				pModelPath = lstModels.GetAt(i);
+				LoadModel(pModelPath, e, vMin, vMax, model, i);
+			}
 		}
-
 		// at this poitn vMin and vMax contain the min max of the model
 		// which needs to be centered at origin 0, 0, 0
-
 		VectorSnap(vMin);
 		VectorSnap(vMax);
 
-		int max = 0;
-		for(int i = 0; i < 3; i++) {
-			if (vMax[i] - vMin[i] < 2) {
-				vMin[i] -= 1, vMax[i] += 1;
-			}
-			max = Q_MAX(vMax[i], max);
+		for (int i = 0; i < 3; i++) {
+			vMin[i] -= 1.0f;
+			vMax[i] += 1.0f;
 		}
 
 		free(e->modelpath);
@@ -716,8 +739,6 @@ eclass_t *GetCachedModel(const char *pName, vec3_t &vMin, vec3_t &vMax, int nFla
 
 	if (Eclass_HasModel(e, vMin, vMax)) {
 		EClass_InsertSortedList(g_md3Cache, e);
-		VectorCopy(vMin, e->mins);
-		VectorCopy(vMax, e->maxs);
 		return e;
 	}
 
@@ -733,10 +754,18 @@ eclass_t* GetCachedModel(entity_t *pEntity, const char *pName, vec3_t &vMin, vec
 	if (!e) {
 		return nullptr;
 	}
-	if (e->pAnims) {
+	/*if (e->model->bIsEditor && (e->nShowFlags & ECLASS_SPRITE) != 0) {
+		VectorSet(vMin, -6, -6, -6);
+		VectorSet(vMax, 6, 6, 6);
+	} else*/ if ((e->nShowFlags & (ECLASS_SPRITE | ECLASS_BEAM | ECLASS_DECAL)) != 0) {
+		VectorSet(vMin, -8, -8, -8);
+		VectorSet(vMax, 8, 8, 8);
+	} else if (e->pAnims) {
 		VectorCopy(pEntity->eclass->mins, vMin);
 		VectorCopy(pEntity->eclass->maxs, vMax);
 	}
+	VectorCopy(vMin, e->mins);
+	VectorCopy(vMax, e->maxs);
 	pEntity->md3Class = e;
 	return e;
 }
@@ -1364,7 +1393,7 @@ void Load_SPRModel_v1(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &
 }
 
 
-void Load_SPRModel_v2(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e) {
+void Load_SPRModel_v2(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e, bool bIsEditor) {
 	readbuf_t stream;
 	stream.buffer = buffer;
 	stream.size = 0;
@@ -1375,19 +1404,18 @@ void Load_SPRModel_v2(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &
 		return;
 	}
 	assert(header->version == 2);
-
-	pModel->nSkinHeight = header->maxheight;
-	pModel->nSkinWidth = header->maxwidth;
 	pModel->nTriCount = 2;
 	pModel->nModelPosition = 0;
 	pModel->pTriList = (trimodel *)qmalloc(sizeof(trimodel) * pModel->nTriCount);
 	pModel->nNumTextures = 0;
 	pModel->nModelType = MODEL_SPRITE;
 	pModel->nSpriteType = header->type;
-	if (pModel->bIsEditor) {
+	if (bIsEditor) {
 		pModel->nSkinHeight = 12;
 		pModel->nSkinWidth = 12;
-		pModel->nSpriteType = 2;
+	} else {
+		pModel->nSkinHeight = header->maxheight;
+		pModel->nSkinWidth = header->maxwidth;
 	}
 	e->nShowFlags |= ECLASS_SPRITE;
 
@@ -1573,10 +1601,11 @@ void Model_DecalView(entitymodel *&pModel, vec3_t normal, vec3_t &vMin, vec3_t &
 
 	vec3_t pos[4], st[4] = { 0 };
 	for (int i = 0; i < 3; i++) {
-		pos[0][i] = (right[i] * pModel->nSkinWidth *  0.5f) + (up[i] * pModel->nSkinHeight *  0.5f) + (forward[i] * 0.01f);
-		pos[1][i] = (right[i] * pModel->nSkinWidth *  0.5f) + (up[i] * pModel->nSkinHeight * -0.5f) + (forward[i] * 0.01f);
-		pos[2][i] = (right[i] * pModel->nSkinWidth * -0.5f) + (up[i] * pModel->nSkinHeight * -0.5f) + (forward[i] * 0.01f);
-		pos[3][i] = (right[i] * pModel->nSkinWidth * -0.5f) + (up[i] * pModel->nSkinHeight *  0.5f) + (forward[i] * 0.01f);
+		float flDeviation = 0.01f;
+		pos[0][i] = (right[i] * pModel->nSkinWidth *  0.5f) + (up[i] * pModel->nSkinHeight *  0.5f) + (forward[i] * flDeviation);
+		pos[1][i] = (right[i] * pModel->nSkinWidth *  0.5f) + (up[i] * pModel->nSkinHeight * -0.5f) + (forward[i] * flDeviation);
+		pos[2][i] = (right[i] * pModel->nSkinWidth * -0.5f) + (up[i] * pModel->nSkinHeight * -0.5f) + (forward[i] * flDeviation);
+		pos[3][i] = (right[i] * pModel->nSkinWidth * -0.5f) + (up[i] * pModel->nSkinHeight *  0.5f) + (forward[i] * flDeviation);
 		if (i == 0) {
 			st[3][i] = 1.0f;
 			st[2][i] = 1.0f;
@@ -2220,3 +2249,109 @@ void Load_MD4Model(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMa
 }
 
 
+vec3_t g_frameVertex[KP_MAX_MDX_VERT];
+modelDrawVertex_t g_kpModelVertices[KP_MAX_MDX_TRI * 3];
+
+void Load_MDXModel(entitymodel *&pModel, byte *buffer, vec3_t &vMin, vec3_t &vMax, eclass_t *e, int nMeshId) {
+	readbuf_t stream;
+	stream.buffer = buffer;
+	stream.offset = 0;
+	stream.size = -1;
+
+	kp_mdxHdr_t *pHdr = stream.GetPtr<kp_mdxHdr_t>();
+	if (strncmp( (char *)pHdr->id, "IDPX", 4) != 0) {
+		return;
+	}
+	// DPX
+
+	// dstvert_t *pST = stream.GetOffset<dstvert_t>(header->ofs_st);
+	kp_mdxSkin_t *pSkin = stream.GetOffset<kp_mdxSkin_t>(pHdr->ofsSkins);
+	kp_mdxTri_t *pTris = stream.GetOffset<kp_mdxTri_t>(pHdr->ofsTris);
+
+	int nFrameIndex = -1;
+	for (int j = 0; j < pHdr->numFrames; j++) {
+		kp_mdxFrame_t *pFrame = stream.GetOffset<kp_mdxFrame_t>(pHdr->ofsFrames + pHdr->frameSize * j);
+		if (strstr(pFrame->name, "idle") || strstr(pFrame->name, "bored") || strstr(pFrame->name, "whatsup")) {
+			nFrameIndex = j;
+			break;
+		}
+		
+	}
+	if (nFrameIndex == -1) {
+		nFrameIndex = 0;
+	}
+
+	kp_mdxFrame_t *pFrame = stream.GetOffset<kp_mdxFrame_t>(pHdr->ofsFrames + pHdr->frameSize * nFrameIndex);
+	for (int k = 0; k < pHdr->numVerts; k++) {
+		vec3_t pos;
+		pos[0] = float(pFrame->verts[k].pos[0]) * pFrame->scale[0] + pFrame->trans[0];
+		pos[1] = float(pFrame->verts[k].pos[1]) * pFrame->scale[1] + pFrame->trans[1];
+		pos[2] = float(pFrame->verts[k].pos[2]) * pFrame->scale[2] + pFrame->trans[2];
+		VectorCopy(pos, g_frameVertex[k]);
+	}
+	int nCountVertex = 0;
+	int tri_type, nCmdPos = 0;
+
+	int *commands = stream.GetOffset<int>(pHdr->ofsGLCmds);
+	int val = commands[nCmdPos++];
+	while (val != 0) {
+		int objID = commands[nCmdPos++];
+		int count = labs(val);
+		if (val < 0) {
+			tri_type = GL_TRIANGLE_FAN;
+		} else {
+			tri_type = GL_TRIANGLE_STRIP;
+		}
+		int nTriPos = 0, nBasePos = nCountVertex;
+		while (count--) {
+			vec2_t st;
+			st[0] = *(float *)&commands[nCmdPos++];
+			st[1] = *(float *)&commands[nCmdPos++];
+			int index = commands[nCmdPos++];
+
+			if (nTriPos < 3) {
+				VectorCopy2(st, g_kpModelVertices[nCountVertex].vTexCoord);
+				VectorCopy(g_frameVertex[index], g_kpModelVertices[nCountVertex].vPos);
+				nTriPos++, nCountVertex++;
+			} else if (tri_type == GL_TRIANGLE_FAN) {
+				VectorCopy2(g_kpModelVertices[nBasePos].vTexCoord, g_kpModelVertices[nCountVertex + 0].vTexCoord);
+				VectorCopy(g_kpModelVertices[nBasePos].vPos, g_kpModelVertices[nCountVertex + 0].vPos);
+
+				VectorCopy2(g_kpModelVertices[nCountVertex - 1].vTexCoord, g_kpModelVertices[nCountVertex + 1].vTexCoord);
+				VectorCopy(g_kpModelVertices[nCountVertex - 1].vPos, g_kpModelVertices[nCountVertex + 1].vPos);
+
+				VectorCopy2(st, g_kpModelVertices[nCountVertex + 2].vTexCoord);
+				VectorCopy(g_frameVertex[index], g_kpModelVertices[nCountVertex + 2].vPos);
+				nCountVertex += 3, nTriPos++;
+			} else {
+				VectorCopy2(g_kpModelVertices[nCountVertex - 2].vTexCoord, g_kpModelVertices[nCountVertex + 0].vTexCoord);
+				VectorCopy(g_kpModelVertices[nCountVertex - 2].vPos, g_kpModelVertices[nCountVertex + 0].vPos);
+
+				VectorCopy2(g_kpModelVertices[nCountVertex - 1].vTexCoord, g_kpModelVertices[nCountVertex + 1].vTexCoord);
+				VectorCopy(g_kpModelVertices[nCountVertex - 1].vPos, g_kpModelVertices[nCountVertex + 1].vPos);
+
+				VectorCopy2(st, g_kpModelVertices[nCountVertex + 2].vTexCoord);
+				VectorCopy(g_frameVertex[index], g_kpModelVertices[nCountVertex + 2].vPos);
+				nCountVertex += 3, nTriPos++;
+			}
+		}
+		val = commands[nCmdPos++]; // next
+	}
+
+	qtexture_t *qtex = notexture; // Texture_ForName(pSkin->name);
+	int num_size = nCountVertex / 3;
+
+	pModel->nSkinHeight = qtex->height;
+	pModel->nSkinWidth = qtex->width;
+	pModel->nTriCount = num_size;
+	pModel->pTriList = (trimodel *)qmalloc(sizeof(trimodel) * pModel->nTriCount);
+	pModel->nNumTextures = 0;
+	pModel->nTextureBind[pModel->nNumTextures++] = qtex->texture_number;
+	pModel->nModelType = MODEL_MESH;
+	pModel->nModelPosition = nMeshId;
+	for (int i = 0; i < nCountVertex; i++) {
+		VectorCopy(g_kpModelVertices[i].vPos, pModel->pTriList[i / 3].v[i % 3]);
+		VectorCopy2(g_kpModelVertices[i].vTexCoord, pModel->pTriList[i / 3].st[i % 3]);
+		ExtendBounds(g_kpModelVertices[i].vPos, vMin, vMax);
+	}
+}

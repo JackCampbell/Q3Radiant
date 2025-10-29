@@ -241,6 +241,9 @@
     <ClCompile Include="pmesh.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
+    <ClCompile Include="eclass_hl.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ZWnd.h">

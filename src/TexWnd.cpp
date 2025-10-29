@@ -1973,7 +1973,7 @@ void Texture_Init(bool bHardInit) {
 
 	if (g_PrefsDlg.m_bHiColorTextures == FALSE) {
 		// load the palette
-		if (IsGame(GAME_Q1 | GAME_HX2)) {
+		if (IsGame(GAME_Q1 | GAME_HEXEN2)) {
 			sprintf(name, "%s/gfx/palette.lmp", strBasePath);
 			if (LoadFile(name, (void **)&palette) == -1) {
 				PakLoadFile(name, (void **)&palette);

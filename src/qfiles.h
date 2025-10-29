@@ -1199,3 +1199,116 @@ typedef struct {
 	int ofsEnd;                     // end of file
 } md4Header_t;
 
+/*
+==============================================================================
+
+MDX file format KIIINGPIN
+
+==============================================================================
+*/
+
+
+#define KP_MAX_MDX_FRAMES 512 //hypov8 was 1024??
+#define KP_MAX_MDX_OBJECTS 64
+#define KP_MAX_MDX_VERT 2048
+#define KP_MAX_MDX_TRI 4096
+
+enum {
+	KP_MDX_PLAYER_HEAD,	//0
+	KP_MDX_PLAYER_BODY,	//1
+	KP_MDX_PLAYER_LEGS,	//2
+	KP_MDX_PLAYER_RL,		//3
+	KP_MDX_PLAYER_FL,		//4
+	KP_MDX_PLAYER_GL,		//5
+	KP_MDX_PLAYER_HMG,	//6
+	KP_MDX_PLAYER_PIPE,	//7
+	KP_MDX_PLAYER_PISTOL,	//8
+	KP_MDX_PLAYER_SG,		//9
+	KP_MDX_PLAYER_TG,		//10
+	KP_MDX_PLAYER_MAX,	//11
+	KP_MDX_PLAYER_NULL = 255
+};
+
+
+typedef struct {
+	int					exportPlayerModel; // keepBoneSpaces;
+} kp_mdxOpts_t;
+
+typedef struct {
+	byte			id[4];
+	int				ver; //kp ver = 4
+
+	int				skinWidth;
+	int				skinHeight;
+	int				frameSize;
+
+	int				numSkins;				// number of textures
+	int				numVerts;				// number of vertices
+	int				numTris;				// number of triangles
+	int				numGLCmds;				// number of gl commands
+	int				numFrames;				// number of frames
+	int				num_SfxDefines; //mdx	// number of sfx definitions
+	int				num_SfxEntries; //mdx	// number of sfx entries
+	int				num_SubObjects; //mdx	// number of subobjects
+
+	int				ofsSkins;			/*mdxSkin_t*/	//name[64];
+	int				ofsTris;			/*mdxTri_t*/	//vertIDX[3], nornalIdx[3].
+	int				ofsFrames;			//vertex pos, vertex normalIDX
+	int				ofsGLCmds;			//triCount(-/+ is type), objectNum, (tri1)s,t, vertIdx... (tri2)s,t,vertIdx...
+	int				offsetVertexInfo;	//objectID //mdx
+	int				offsetSfxDefines;	//mdx 
+	int				offsetSfxEntries;	//mdx 
+	int				offsetBBoxFrames;	//mdx 
+	int				offsetDummyEnd;
+
+	int				ofsEnd;
+} kp_mdxHdr_t;
+
+
+typedef struct {
+	char			name[64];
+} kp_mdxSkin_t;
+
+//vertPos[3], normalIndex
+typedef struct {
+	byte			pos[3]; //vertex position
+	byte			nrmIdx; //vertex normal index. shared normals
+} kp_mdxVert_t;
+
+typedef struct {
+	int				objectNum; //allways 1 (first object)
+} kp_mdxVertInfo_t;
+
+//vertIDX[3], normalIDX[3]
+typedef struct {
+	WORD			vIdx[3]; //3 vertex index to make a tri
+	WORD			uvIdx[3]; //vertexnormal[3] nornalIdx
+} kp_mdxTri_t;
+
+//scale[3], trans[3], name[16]
+typedef struct {
+	float			scale[3];
+	float			trans[3];
+	char			name[16]; //frame name
+	kp_mdxVert_t	verts[1]; // sized
+} kp_mdxFrame_t;
+
+
+typedef struct {
+	float min[3];
+	float max[3];
+} kp_mdxBBox_t;
+
+typedef struct {
+	float			st[2];
+	int				vIdx;
+} kp_mdxGLCmd_t;
+
+
+//GL OBJECT HEADDER
+typedef struct {
+	int TrisTypeNum;
+	int SubObjectID;
+} kp_mdxGLCmdHeader_t;
+
+

@@ -54,6 +54,7 @@ public:
 	texdef_t() {
 		name = new char[1];
 		name[0] = '\0';
+		memset(UVaxis, 0x0, sizeof(UVaxis));
 	}
 	~texdef_t() {
 		delete[]name;
@@ -91,6 +92,7 @@ public:
 			contents = rhs.contents;
 			flags = rhs.flags;
 			value = rhs.value;
+			memcpy(UVaxis, rhs.UVaxis, sizeof(UVaxis));
 		}
 		return *this;
 	}
@@ -102,6 +104,8 @@ public:
 	int		contents;
 	int		flags;
 	int		value;
+
+	vec3_t UVaxis[2]; // format 220
 };
 
 // Timo
@@ -403,7 +407,6 @@ typedef struct entitymodel_t {
 	vec3_t			vMin, vMax;
 	unsigned int	nModelType;
 	int				nSpriteType;
-	bool			bIsEditor;
 	char			strSurfaceName[64];
 } entitymodel;
 

@@ -243,18 +243,7 @@ qboolean QE_LoadProject(char *projectfile) {
 		}
 	}*/
 
-	StartTokenParsing(strData.GetBuffer(0));
-	while (1) {
-		entity_t *ent = Entity_Parse(true);
-		if (!ent) {
-			break;
-		}
-		char *name = ValueForKey(ent, "game");
-		if (IsGame(name)) {
-			g_qeglobals.d_project_entity = ent;
-			break;
-		}
-	}
+	QE_ProjectList(strData);
 	if (!g_qeglobals.d_project_entity) {
 		Error("Couldn't parse %s", projectfile);
 	}
@@ -275,7 +264,7 @@ qboolean QE_LoadProject(char *projectfile) {
 	if (strlen(ValueForKey(g_qeglobals.d_project_entity, "brush_primit")) == 0) {
 		SetKeyValue(g_qeglobals.d_project_entity, "brush_primit", "0");
 	}
-	g_PrefsDlg.m_bHiColorTextures = IsGame(GAME_ID3);
+	g_PrefsDlg.m_bHiColorTextures = IsGame(GAME_ID3) || IsGame(GAME_KINGPIN);
 	g_qeglobals.m_bBrushPrimitMode = IntForKey(g_qeglobals.d_project_entity, "brush_primit");
 
 
@@ -894,4 +883,71 @@ bool Lex_SkipToken(char *&src, const char*match) {
 		}
 	}
 	return false;
+}
+
+
+
+
+struct game_t g_lstGames[] = {
+	{ GAME_Q1, "Quake1", nullptr },
+	{ GAME_Q2, "Quake2", nullptr },
+	{ GAME_Q3, "Quake3", nullptr },
+	{ GAME_WOLF, "Wolfenstein", nullptr },
+	{ GAME_HEXEN2, "Hexen2", nullptr },
+	{ GAME_HL, "HalfLife", nullptr },
+	{ GAME_ET, "ET", nullptr },
+	{ GAME_KINGPIN, "Kingpin", nullptr },
+	{ GAME_EF, "EliteForce", nullptr },
+	{ GAME_JK2, "JK2", nullptr },
+	{ GAME_SOF2, "SOF2", nullptr },
+	{ GAME_MOHAA, "MOHAA", nullptr },
+	{ GAME_COD, "COD", nullptr },
+	{ 0, nullptr, nullptr }
+};
+
+int g_activeGame = GAME_Q3;
+
+game_t *FindGameId(const CString &name) {
+	for (int i = 0; g_lstGames[i].name; i++) {
+		if (name == g_lstGames[i].name) {
+			return &g_lstGames[i];
+		}
+	}
+	return nullptr;
+}
+
+bool IsGame(int flags) {
+	assert(g_activeGame != -1);
+	return (flags & g_activeGame) != 0;
+}
+
+void QE_ProjectList(CString &strData) {
+	StartTokenParsing(strData.GetBuffer(0));
+	
+	g_qeglobals.d_project_entity = nullptr;
+	while (1) {
+		entity_t *ent = Entity_Parse(true);
+		if (!ent) {
+			break;
+		}
+		char *name = ValueForKey(ent, "game");
+		game_t *game = FindGameId(name);
+		if (game) {
+			game->entity = ent;
+			continue;
+		}
+	}
+	game_t *game = nullptr;
+	do {
+		CString name = g_PrefsDlg.m_strWhatGame;
+		game = FindGameId(name);
+		if (game->entity) {
+			break;
+		}
+		if (g_PrefsDlg.DoModal() == IDCANCEL) {
+			Error("Cancelled by the user.!!!");
+		}
+	} while (true);
+	g_qeglobals.d_project_entity = game->entity;
+	g_activeGame = game->id;
 }

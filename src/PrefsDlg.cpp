@@ -269,47 +269,6 @@ void CPrefsDlg::OnBtnBrowse() {
 	}
 }
 
-struct game_t {
-	int id;
-	const char *name;
-} g_lstGames[] = {
-	{ GAME_Q1, "Quake1" },
-	{ GAME_Q2, "Quake2" },
-	{ GAME_Q3, "Quake3" },
-	{ GAME_WOLF, "Wolfenstein" },
-	{ GAME_HX2, "Hexen2" },
-	{ GAME_HL, "Half-Life"},
-	{ GAME_ET, "EnemyTerritory" },
-	{ 0, nullptr }
-};
-
-int g_activeGame = -1;
-
-int FindGameId(const CString &name) {
-	for (int i = 0; g_lstGames[i].name; i++) {
-		if (name == g_lstGames[i].name) {
-			return g_lstGames[i].id;
-		}
-	}
-	return -1;
-}
-
-bool IsGame(int flags) {
-	if (g_activeGame == -1) {
-		CString game = g_PrefsDlg.m_strWhatGame;
-		g_activeGame = FindGameId(game);
-	}
-	return (flags & g_activeGame) != 0;
-}
-
-bool IsGame(const char *name) {
-	CString game = g_PrefsDlg.m_strWhatGame;
-	if (strcmp(game, name) != 0) {
-		return false;
-	}
-	g_activeGame = FindGameId(game);
-	return true;
-}
 
 BOOL CPrefsDlg::OnInitDialog() {
 	CDialog::OnInitDialog();

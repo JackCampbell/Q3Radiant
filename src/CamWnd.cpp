@@ -799,9 +799,16 @@ void CCamWnd::Cam_Draw() {
 			m_EditorBrushes[m_nNumEditorBrushes++] = brush;
 			continue;
 		}
-		if (brush->owner->eclass->nShowFlags & (ECLASS_SPRITE | ECLASS_BEAM | ECLASS_DECAL)) {
-			m_TransBrushes[m_nNumTransBrushes++] = brush;
-			continue;
+		if (IsGame(GAME_HL)) {
+			if (brush->owner->eclass->nShowFlags & (ECLASS_SPRITE | ECLASS_BEAM | ECLASS_DECAL)) {
+				m_TransBrushes[m_nNumTransBrushes++] = brush;
+				continue;
+			}
+			int mode = IntForKey(brush->owner, "rendermode", "0");
+			if (mode != 0) {
+				m_TransBrushes[m_nNumTransBrushes++] = brush;
+				continue;
+			}
 		}
 
 		if (brush->brush_faces->texdef.flags & (SURF_TRANS33 | SURF_TRANS66)) {
